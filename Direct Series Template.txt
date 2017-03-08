@@ -1,0 +1,7117 @@
+NO    Required Firmware Version:D400s08j
+NO    PathMaster Version: 4.1    Build: 338 
+NO    PVAPortal Version:1.2.1   PVAPortal Build: 81616 
+REM ===========================================================================================
+REM   This software, including the information contained
+REM   herein, is the property of Precision Valve & Automation,
+REM   Inc. or its licensee and is considered confidential and proprietary
+REM   information.  It is delivered on the express condition that
+REM   it not be used, disclosed, or reproduced in whole or in
+REM   part, for any reason without prior written consent of
+REM   Precision Valve & Automation, Inc.
+REM
+REM   (C) 2016 Precision Valve & Automation, Inc.
+REM
+
+REM ===============================================
+REM  Startup And Scan Routines (Thread 0)
+REM ===============================================
+#AUTO
+   vPAGE=0
+   vSYSPG=0
+   vPRD_SEL=0
+   vCOLOR=0
+   dmcFLAG=0
+   pmFLAG=0
+   PASSED=0
+   POS_VAL=0
+   FANPASS=0
+   vSYSMSG=0
+   DG_ERR=0
+   ALRM_STP=0
+   LT_EN=1
+   XFL_EN=1
+   OP $0,$FFE0,$FFFF
+
+#AUTO1
+   ms=1.024
+   AXES=3
+   TRY=0
+   IO_FAIL=0
+   UNSOL=TIME
+   JS#IP_ADDR
+   JS#UNSL_WT
+   JS#IO_CON,(_IHG2<>-2)
+   vDOG=2
+
+#WT_DOG
+   JP#WT_DOG,vDOG<>1
+
+   DOG=40
+   TRY_RES=0
+   XDE=0
+   JS#MAIN_IO
+
+#AUTO2
+   AB1
+   CB oALM
+   JS#PRE_CHK
+   DGTIME=TIME
+   DGERR_TM=TIME
+   WD_TMR=TIME
+
+REM ===============================================
+REM  Scan Routine
+REM ===============================================
+#SCAN
+   JP#SCAN,(QA=1)
+   CW1
+   AP_TE=(TIME-AP_TP)*AP_EN
+
+   JP#FESTOP,(@IN[iFLOW]*XFL_EN)=1
+   JP#ESTOP,@IN[iESTOP]=1
+   JP#ESTOP,(@IN[iDOOR]=0)&((@IN[iBYPASS]=1)|(DRFLAG=1))
+   JP#ESTOP,(AIR_ERR<>0)&(RUNNING=0)&(PING=0)
+   JP#ESTOP,(RUNNING*ACFLAG*(@IN[iBYPASS]=0))
+   JP#ESTOP,(UNS_ERR=1)
+
+   JP#SHT_DN,vQUIT=2
+
+   JP#DG_ER,(((TIME-DGERR_TM)>3500))
+
+   JS#WD_ON,(@IN[iBR_WDOG]=0)&(@OUT[oBR_WDOG]=0)
+   JS#WD_OF,(@IN[iBR_WDOG]=1)&(@OUT[oBR_WDOG]=1)
+   IF (BURN=0)
+     JP#WD_ER,(TIME-WD_TMR)>WD_TO
+   ENDIF
+
+   JP#ESTOP,VPNTO=1
+   JS#LT_IDLE
+   JP#ESTOP,VIS_ERR<>NULL
+   JP#ESTOP,pmFLAG=1
+   
+   JS#M_SETUP,(M_SETUP=0)   
+
+REM ===============================================
+REM   Front Panel Light Control
+REM ===============================================
+REM ========================
+REM   White Light
+REM ========================
+   JS#VS_L2ON,(vLGHT[2]*(WHL_EN=0)*(MODE=0)*(RUNNING=0)*(1-@OUT[oHSELT]))
+   JS#VS_L2OF,(vLGHT[2]*(WHL_EN=0)*(MODE=0)*(RUNNING=0)*@OUT[oHSELT])
+
+REM ========================
+REM   Black Light
+REM ========================
+REM Black Light   JS#VS_L3ON,(vLGHT[3]*(BLK_EN=0)*(MODE=0)*(RUNNING=0)*(1-@OUT[oBLKLT]))
+REM Black Light   JS#VS_L3OF,(vLGHT[3]*(BLK_EN=0)*(MODE=0)*(RUNNING=0)*@OUT[oBLKLT])
+
+REM ===========================================
+REM   Module Error Checking
+REM ===========================================
+REM 'Flow Monitor Error Checking
+REM Flow Monitor Module JS#FLO_SCN
+REM ===========================================
+REM 'GSE Scale/Digital Low Level Error Checking
+REM Low Level Module   JS#LOW_SCN
+REM ===========================================
+REM 'Needle Calibration Error Checking
+REM Needle Cal Module   JS#NDL_SCN
+REM ===========================================
+REM 'Part Manager Error Checking
+   JS#PMG_SCN
+REM ===========================================
+REM 'Board Locator Error Checking
+REM Board Locator Module   JS#LOC_SCN
+REM ===========================================
+REM 'Gear Pump/Recirc Error Checking
+REM   JS#PMP_SCN
+REM ===========================================
+REM 'Material Air Pressure Error Checking
+REM Material Pressure   JS#PRS_SCN
+REM ===========================================
+REM 'Bi-Directional Error Checking
+REM   JS#BID_SCN
+REM ===========================================
+REM 'VPX Error Checking
+REM   JS#VPX_SCN
+REM ===========================================
+REM 'Shot Scale Error Checking
+REM   JS#SCL_SCN
+REM ===========================================
+REM 'Heater Error Checking
+REM   JS#HTR_SCN
+REM ===========================================
+REM 'Spray Width Error Checking
+REM   JS#WID_SCN
+REM ===========================================
+REM 'Conveyor Adjust Error Checking
+REM cWidth Adjust Module   JS#CWA_SCN
+REM ===========================================
+REM 'Valve Adjust Error Checking
+REM vWidth Adjust Module   JS#VWA_SCN
+REM ===========================================
+REM 'Laser Error Checking
+REM   JS#LAS_SCN
+REM ===========================================
+REM 'Indicator Error Checking
+REM   JS#IND_SCN
+REM ===========================================
+REM 'JDX Error Checking
+REM   JS#JDX_SCN
+REM ===========================================
+REM 'SVX Error Checking
+REM   JS#SVX_SCN
+REM ===========================================
+REM 'Barcode Scanner Error Checking
+REM   JS#SCN_SCN
+REM ===========================================
+REM 'Ionizer Error Checking
+REM   JS#ION_SCN
+REM ===========================================
+
+    IF(_XQ7<0);JS#MONITOR;ENDIF
+
+    FPOWER=1
+    JP#SCAN
+
+#WD_ON;SB oBR_WDOG;WD_TMR=TIME;EN
+#WD_OF;CB oBR_WDOG;WD_TMR=TIME;EN
+#WD_ER;WD_ERR=1;JP#ESTOP
+
+#DG_ER
+   DG_ERR=1
+   JP#ESTOP
+
+#SHT_DN
+   JS#S2003
+   JS#CLR_RMT
+   SHT_VB=1
+   JP#ESTOP
+
+#FESTOP;FAN_ERR=1;JP#ESTOP
+
+REM ---------------------------------
+REM  I/O Connect
+REM ---------------------------------
+#IO_CON
+   IHG=>-2
+   WT(500*ms)
+   IHG=100,100,100,102<502>2
+   WT(500*ms)
+   TRY=TRY+1
+   RESPONSE=TIME
+#CON_RES
+   JP#RSP_ERR,((TIME-RESPONSE)>(5000*ms))
+   JP#CON_RES,_IHG2=-6
+   JP#IO_ERR,TRY>2
+   JP#IO_CON,_IHG2<>-2
+   DA TRY,RESPONSE
+EN
+
+#IO_ERR
+   IO_FAIL=1
+EN
+
+#UNSL_WT
+   JP#UNSL_ER,((TIME-UNSOL)>(5000*ms))
+   JP#UNSL_WT,_IHH2<>1
+   DA UNSOL
+EN
+
+#UNSL_ER
+   JP#S2060
+EN
+
+#RSP_ERR
+   JP#S2061
+EN
+
+#UNS_PNG
+   UNS_ERR=(((_IHH2)<>1)&((_IHH2)<>2))
+EN
+
+REM ===============================================
+REM  System Monitor (Thread 7)
+REM ===============================================
+REM----------------------------------
+REM   System Monitor Wrapper
+REM----------------------------------
+#MONITOR
+   HX7
+
+REM------------------------------------------------------
+REM  Common Pressure Conversions:
+REM   0.1 MPa = 14.5037738 PSI = 1 bar
+REM   1.0 MPa = 145.037738 PSI = 10 bar
+REM------------------------------------------------------
+
+REM------------------------------------------------------
+REM  Common Gauges:
+REM   Panasonic 101A: -0.1 MPa - 0.1 MPa @ 1.0 - 5 V
+REM                      Actual VDC = 7.252 PSI/Volt
+REM                    Adjusted VDC = 7.452 PSI/Volt
+REM   Panasonic 102A: -0.1 MPa - 1.0 MPa @ 0.6 - 5 V
+REM                    VDC = 36.259 PSI/Volt
+REM   GEMS 3102H0005G08E000: 0 bar - 5 bar @ 1 - 5 V
+REM                    VDC = 18.130 PSI/Volt
+REM------------------------------------------------------
+
+REM------------------------------------------------------------------
+REM  Unit/Volt Values, High/Low Offsets & Sample Size
+REM
+REM            x   :  Analog #
+REM     AN_VDC[x]  :  Ratio of units per volt
+REM     AN_OFF[x]  :  LOW_OFF
+REM     AN_OFF[1x] :  HI_OFF
+REM
+REM                      (Max Unit - Min Unit)
+REM  AN_VDC =  ---------------------------------------
+REM            (Max Analog Signal - Min Analog Signal)
+REM
+REM  LOW_OFF = Analog value at 0 psi
+REM
+REM           [                           ( Max PSI           )  ]
+REM           [ Analog value at Max PSI - ( ------- + LOW_OFF )  ]
+REM  HI_OFF = [                           (  AN_VDC           )  ]
+REM           -----------------------------------------------------
+REM                   (Analog value at Max PSI - LOW_OFF)
+REM------------------------------------------------------------------
+
+REM   Analog #1
+   AN_VDC[1]=7.275
+   AN_OFF[1]=2.975
+   AN_OFF[11]=-0.022
+
+REM   Analog #2
+   AN_VDC[2]=7.275
+   AN_OFF[2]=2.975
+   AN_OFF[12]=-0.022
+
+REM   Analog #3
+   AN_VDC[3]=36.259
+   AN_OFF[3]=1.043
+   AN_OFF[13]=-0.011
+
+REM   Analog #4
+   AN_VDC[4]=36.259
+   AN_OFF[4]=1.028
+   AN_OFF[14]=-0.007
+
+REM   Analog #5
+   AN_VDC[5]=36.259
+   AN_OFF[5]=0.983
+   AN_OFF[15]=-0.004
+
+REM   Analog #6
+REM   AN_VDC[6]=18.13
+REM  AN_OFF[6]=0.983
+REM   AN_OFF[16]=0.004
+
+REM   Analog #7
+REM   AN_VDC[7]=18.13
+REM   AN_OFF[7]=0.983
+REM   AN_OFF[17]=-0.022
+
+REM   Analog #8
+REM   AN_VDC[8]=18.13
+REM   AN_OFF[8]=0.983
+REM   AN_OFF[18]=0.004
+
+REM------------------------------
+REM  Analog Reading Sample Size
+REM------------------------------
+   S_SIZE=50
+
+   XQ#MON,7
+EN
+
+REM----------------------------------
+REM   System Monitor
+REM----------------------------------
+#MON
+   AN_SAMP[1]=0
+   AN_SAMP[2]=0
+   AN_SAMP[3]=0
+   AN_SAMP[4]=0
+   AN_SAMP[5]=0
+   AN_SAMP[6]=0
+   AN_SAMP[7]=0
+   AN_SAMP[8]=0
+   AN_CNT=0
+
+#SAMP_LP
+
+   AN_SAMP[1]=AN_SAMP[1]+@AN[1] ;'Atom Air A
+   AN_SAMP[2]=AN_SAMP[2]+@AN[2] ;'Atom Air B
+REM Spray Width   AN_SAMP[3]=AN_SAMP[3]+@AN[3] ;'Spray Width
+REM MAT 1   AN_SAMP[4]=AN_SAMP[4]+@AN[4] ;'Material 1 Pressure
+REM MAT 2   AN_SAMP[5]=AN_SAMP[5]+@AN[5] ;'Material 2 Pressure
+REM   AN_SAMP[6]=AN_SAMP[6]+@AN[6]
+REM   AN_SAMP[7]=AN_SAMP[7]+@AN[7]
+REM   AN_SAMP[8]=AN_SAMP[8]+@AN[8]
+
+   AN_CNT=AN_CNT+1
+   JP#SAMP_LP,AN_CNT<S_SIZE
+
+REM====================================================
+REM        Analog Input Monitoring Routines
+REM====================================================
+REM------------------------------
+REM 1-5v Atom Air 1 (-14.6 - 14.5 psi) Pressure:
+REM------------------------------
+   AN_AVG[1]=(AN_SAMP[1]/S_SIZE)
+   VDC_OFF=AN_OFF[1]+((AN_AVG[1]-AN_OFF[1])*AN_OFF[11])
+   AN_AVG[0]=((AN_AVG[1]-VDC_OFF)*AN_VDC[1])
+   IF(AN_AVG[0]<.5)
+      AN_ACT[1]=0
+   ELSE
+      AN_ACT[1]=AN_AVG[0]
+   ENDIF
+
+REM------------------------------
+REM 1-5v Atom Air 2 (-14.6 - 14.5 psi) Pressure:
+REM------------------------------
+   AN_AVG[2]=(AN_SAMP[2]/S_SIZE)
+   VDC_OFF=AN_OFF[2]+((AN_AVG[2]-AN_OFF[2])*AN_OFF[12])
+   AN_AVG[0]=((AN_AVG[2]-VDC_OFF)*AN_VDC[2])
+   IF(AN_AVG[0]<.5)
+      AN_ACT[2]=0
+   ELSE
+      AN_ACT[2]=AN_AVG[0]
+   ENDIF
+   
+REM------------------------------
+REM Analog 3 (? - ? psi) Pressure:
+REM------------------------------
+REM Spray Width   AN_AVG[3]=(AN_SAMP[3]/S_SIZE)
+REM Spray Width   VDC_OFF=AN_OFF[3]+((AN_AVG[3]-AN_OFF[3])*AN_OFF[13])
+REM Spray Width   AN_AVG[0]=((AN_AVG[3]-VDC_OFF)*AN_VDC[3])
+REM Spray Width   IF(AN_AVG[0]<.5)
+REM Spray Width       AN_ACT[3]=0
+REM Spray Width    ELSE
+REM Spray Width       AN_ACT[3]=AN_AVG[0]
+REM Spray Width    ENDIF        
+   
+   
+REM-------------------------------------------------------
+REM   Atom Air & High Range Pressure Error Catch:
+REM-------------------------------------------------------
+   AN_ERR[1]=( AN_ACT[1] > AA1_HI )+( AN_ACT[1] < AA1_LO )
+   AN_ERR[2]=( AN_ACT[2] > AA2_HI )+( AN_ACT[2] < AA2_LO )
+   
+
+   AIR_FLG=1
+   JS#AIR_ER,((@OUT[oH1VLV])*(AN_ERR[1])*H1AA_EN*(TIME-AN_TM[1])*(ACFLAG))>AN_TO
+   AIR_FLG=2
+   JS#AIR_ER,((@OUT[oH2VLV])*(AN_ERR[2])*H2AA_EN*(TIME-AN_TM[2])*(ACFLAG))>AN_TO
+
+
+REM====================================================
+REM           Material Pressure Monitoring
+REM====================================================
+REM Material Pressure   JS#PRS_MON
+REM====================================================
+
+REM====================================================
+REM              Heater Temp Monitoring
+REM====================================================
+REM   JS#HTR_MON
+REM====================================================
+
+REM====================================================
+REM              JDX Monitoring
+REM====================================================
+REM   JS#JDX_MON
+REM====================================================
+
+   JP#MON
+
+REM----------------------------------
+REM   Flag Atom Air Errors
+REM----------------------------------
+#AIR_ER
+   IF(QA=1)
+      vACK=0
+	  MG {EH}{^02},"Atom Air Valve:",AIR_FLG{F1.0}," Error.",{^03}
+      JS#WT_ACK
+	  ACFLAG=0
+   ENDIF
+   
+   JP#NOOP,QA=1   
+   AIR_ERR=AIR_FLG
+EN
+
+REM ===============================================
+REM  Light Tower Controls (Thread 0)
+REM ===============================================
+#LT_IDLE
+   JP#NOOP,(LT_EN=0)
+   LT_STOR=LT_STAT
+
+   LT_DIGIT=@INT[(LT_STAT/1000)]
+   OB oRED,((LT_DIGIT=1)|(((LT_DIGIT>1)*(TIME-BLNK_TM[1]))>(512/(LT_DIGIT+1))))
+   IF((LT_DIGIT=0)|((TIME-BLNK_TM[1])>(1024/(LT_DIGIT+1))))
+      BLNK_TM[1]=TIME
+   ENDIF
+
+   LT_DIGIT=@INT[((LT_STAT%1000)/100)]
+   OB oAMB,((LT_DIGIT=1)|(((LT_DIGIT>1)*(TIME-BLNK_TM[2]))>(512/(LT_DIGIT+1))))
+   IF((LT_DIGIT=0)|((TIME-BLNK_TM[2])>(1024/(LT_DIGIT+1))))
+      BLNK_TM[2]=TIME
+   ENDIF
+
+   LT_DIGIT=@INT[(((LT_STAT%1000)%100)/10)]
+   OB oGRN,((LT_DIGIT=1)|(((LT_DIGIT>1)*(TIME-BLNK_TM[3]))>(512/(LT_DIGIT+1))))
+   IF((LT_DIGIT=0)|((TIME-BLNK_TM[3])>(1024/(LT_DIGIT+1))))
+      BLNK_TM[3]=TIME
+   ENDIF
+
+   LT_DIGIT=@INT[((((LT_STAT%1000)%100)%10)/1)]
+   OB oALM,(((LT_DIGIT>0)*(TIME-BLNK_TM[4]))>(512/(LT_DIGIT+1)))
+   IF((LT_DIGIT=0)|((TIME-BLNK_TM[4])>(1024/(LT_DIGIT+1))))
+      BLNK_TM[4]=TIME
+   ENDIF
+
+   EN
+
+REM ===============================================
+REM  Auxiliary Error Routines (Thread 1)
+REM ===============================================
+#LT_FLSH
+   JP#LT_FLSH,LT_EN=0
+   JP#LT_FLSH,WD_ERR=1
+   CB oALM;SB oRED;CB oAMB;CB oGRN
+   JP#LT_FLSH,MERR<4
+   JP#LT_FLSH,MERR=1009
+   IF((@IN[iTEACH]+@IN[iPURGE]+@IN[iAXIS])<3);ALRM_STP=1;CB oALM;ENDIF
+   JP#LT_FLSH,(ALRM_STP=1)
+   SB oALM;WT(500*ms);CB oRED
+   CB oALM;WT(500*ms)
+   JP#LT_FLSH
+
+REM ===============================================
+REM  Emergency Stop and Error Routine (Thread 0)
+REM ===============================================
+#ESTOP
+   ETIME=TIME
+   HX1;HX2;HX3;HX4;HX5;HX6
+
+REM   Leave Monitor Thread Running
+REM   HX7
+
+REM===================================================
+REM Leave Material Air Pressure On If Mode Is "Always On"
+REM===================================================
+REM Material PressureREM MAT 1   JS#PRS1_ST
+REM Material PressureREM MAT 2   JS#PRS2_ST
+REM===================================================
+   OP $0,$FFE0,$FFFF
+
+   JS#CLR_RMT;JS#MSG_END,(IN_MSG=1)
+
+   ER*=-1;WT(100*ms);AB1;MO;KEY1=0;MEC=20
+   MERR=0;LT_STOR=0;TEACH=0
+   ALRM_STP=0
+   XQ#LT_FLSH,1;FPOWER=0
+   vSYSPG=0
+
+   IF(pmFLAG<>1)
+     dmcFLAG=5
+   ENDIF
+
+   vFIDRUN=0
+   SX0
+
+#ESTOP1
+   WT(150*ms)
+   ZS
+   ACFLAG=0
+   JP#E_ESTOP,(@IN[iESTOP]=1)
+   JP#E_DOOR,(@IN[iDOOR]=0)&((@IN[iBYPASS]=1)|(DRFLAG=1))
+   JP#E_PNEU,VPNTO=1
+   JP#E_VIS,VIS_ERR<>NULL
+   JP#E_PMDL,pmFLAG=1
+
+   MEC=1024;JP#S1024,UNS_ERR=1
+   MEC=1030;JP#S1030,AIR_ERR<>0
+   MEC=1400;JP#S1400,FAN_ERR=1
+   MEC=1401;JP#S1401,WD_ERR=1
+   MEC=1403;JP#S1403,(RUNNING*(@IN[iBYPASS]=0)*(MODE=0))
+
+REM ===========================================
+REM   Module Error Handling
+REM ===========================================
+REM 'Flow Monitor Error Handling
+REM Flow Monitor Module    JS#FLO_ERR
+REM ===========================================
+REM 'GSE Scale/Digital Low Level Error Handling
+REM Low Level Module   JS#LOW_ERR
+REM ===========================================
+REM 'Needle Calibration Error Handling
+REM Needle Cal Module   JS#NDL_ERR
+REM ===========================================
+REM 'Part Manager Error Handling
+   JS#PMG_ERR
+REM ===========================================
+REM 'Board Locator Error Handling
+REM Board Locator Module   JS#LOC_ERR
+REM ===========================================
+REM 'Gear Pump/Recirc Error Handling
+REM   JS#PMP_ERR
+REM ===========================================
+REM 'Material Air Pressure Error Handling
+REM Material Pressure   JS#PRS_ERR
+REM ===========================================
+REM 'Bi-Directional Error Handling
+REM   JS#BID_ERR
+REM ===========================================
+REM 'VPX Error Handling
+REM   JS#VPX_ERR
+REM ===========================================
+REM 'Shot Scale Error Handling
+REM   JS#SCL_ERR
+REM ===========================================
+REM 'Heater Error Handling
+REM   JS#HTR_ERR
+REM ===========================================
+REM 'Spray Width Error Handling
+REM   JS#WID_ERR
+REM ===========================================
+REM 'Conveyor Adjust Error Handling
+REM cWidth Adjust Module   JS#CWA_ERR
+REM ===========================================
+REM 'Valve Adjust Error Handling
+REM vWidth Adjust Module   JS#VWA_ERR
+REM ===========================================
+REM 'Laser Error Handling
+REM   JS#LAS_ERR
+REM ===========================================
+REM 'Indicator Error Handling
+REM   JS#IND_ERR
+REM ===========================================
+REM 'JDX Error Handling
+REM   JS#JDX_ERR
+REM ===========================================
+REM 'SVX Error Handling
+REM   JS#SVX_ERR
+REM ===========================================
+REM 'Barcode Scanner Error Handling
+REM   JS#SCN_ERR
+REM ===========================================
+REM 'Ionizer Error Handling
+REM   JS#ION_ERR
+REM ===========================================
+
+   JP#QUIT,SHT_VB=1
+   JP#ESTOP2,POS_VAL=0
+   MEC=-1
+   JS#S1003,(vSYSMSG<>1003)
+   JP#E_DOG,DG_ERR=1
+   IF((vSYSMSG=1003)&(vPAGE<>4));vPAGE=4;ENDIF
+   JP#ESTOP1,vCONT<>1
+
+   MERR=0;CBFLAG=1
+   JS#DR_CLOS
+   PING=0;AP_OUT=1
+   vCONT=0
+   vCSTOP=0
+   vMANUAL=0
+   vAUTO=0
+   vSETUP=0
+   MODE=0
+   RUNNING=0
+   CVFLAG=0
+   LT_STAT=1000
+   HX1;HX2
+   ACFLAG=0;VLV=VSTORE
+   SB oPOWER;WT(1000*ms)
+   CSS;CST;SHXYZ
+   IF(AXES=4);SHW;ENDIF
+   WT(100*ms)
+   ER 1000,1000,1000
+   IF(AXES=4);ERW=1000;ENDIF
+   DGTIME=TIME
+   DGERR_TM=TIME
+   WD_TMR=TIME
+   iUPBA=7010
+   iDNRDY=7011
+   itUPBA=99
+   itDNRDY=99
+   XQ#CS_MN1,1
+   JP#SCAN
+
+#ESTOP2
+   MERR=-2
+   JS#S1002
+   JS#W_VCONT
+   HX1;HX2
+   ZS0;DP 0,0,0,0
+   JP#AUTO1
+
+#E_ESTOP
+   MEC=1
+   MERR=MEC
+   JS#S2020
+   JP#E_ESTOP,@IN[iESTOP]=1
+   MERR=0
+   JP#ESTOP1
+
+#E_DOOR
+   MEC=3
+   JS#S2021
+   JP#E_DOOR,(@IN[iDOOR]=0)&((@IN[iBYPASS]=1)|(DRFLAG=1))
+   MERR=0
+   JP#ESTOP1
+
+#E_PNEU
+   MEC=1200
+   MERR=MEC
+   JS#S1200
+   JS#W_VCONT
+   JS#BT_REL
+   VPNTO=0
+   MERR=0
+   JP#ESTOP1
+
+REM ---------------------------
+REM  Handle Vision Error
+REM ---------------------------
+#E_VIS
+   MEC=VIS_ERR
+   MERR=MEC
+   JS#S1500
+   JS#W_VCONT
+   JS#BT_REL
+   VIS_ERR=-99
+   MERR=0
+   JP#ESTOP1
+EN
+
+REM ---------------------------
+REM  Handle PathMaster Download
+REM ---------------------------
+#E_PMDL
+   MEC=1
+   MERR=MEC
+   vPAGE=4
+   vSYSMSG=2020
+   WT(100*ms)
+
+   JS#SYS_BEG
+   MG{EH}{N},"Saving data...please wait."
+   JS#SYS_END
+
+   DLTIME=TIME
+
+#EPM_LP
+   vSYSMSG=2300
+   JP#EPM_LP,(TIME-DLTIME)<8000
+
+   vSYSMSG=1300
+   JS#W_VCONT
+   JS#BT_REL
+   MERR=0
+   pmFLAG=0
+   JP#ESTOP1
+EN
+
+#E_DOG
+   MEC=1020
+   MERR=MEC
+   JS#S1020
+   JS#W_VCONT
+   JS#BT_REL
+   DG_ERR=0
+   JP#ESTOP1
+
+#QUIT
+   SHT_VB=0
+   MERR=0
+#P_WAIT
+   JP#P_WAIT,vQUIT=2
+   JP#ESTOP1
+
+REM ===============================================
+REM  Command Error Routine (Thread 0)
+REM ===============================================
+#CMDERR
+   HX1;HX2;HX3;HX4;HX5;HX6;HX7
+   ST;AM;MO
+   OP $0,$FFE0,$FFFF
+   vSYSPG=0
+   SX0
+   SHXYZ
+   IF(AXES=4);SHW;ENDIF
+   TEACH=0;FPOWER=0
+   ERR=_TC
+   MEC=1010;MERR=MEC
+   LINE=_ED
+   XQ#LT_FLSH,1
+   JP#FWERR,XDE=2
+   JP#GSERR,XDE=41
+   JP#C_RESET,(((INIT>0)*(ERR))=9)
+   JP#C_RESET,(((INIT>0)*(ERR))=57)
+   JP#C_RESET,(((INIT>0)*(ERR))=83)
+   vCONT=0
+   JS#S1021
+   JS#ER_WT
+   MERR=0
+   HX1
+   DA ERR,LINE
+   JS#BURN
+   JP#AUTO1
+
+#GSERR;JS#S2012;HX1;SB oRED;SB oALM;HX
+#FWERR;JS#S2011;HX1;SB oRED;SB oALM;HX
+
+#C_RESET
+   ZS
+   JP#S2010,TRY_RES=INIT
+   TRY_RES=INIT
+   JP#RESET,INIT=1
+
+REM ===========================================
+REM   Module Variable Reset Routines
+REM ===========================================
+REM 'Flow Monitor Reset
+REM Flow Monitor Module    JP#FLO_RST,INIT=2
+REM ===========================================
+REM 'GSE Scale/Digital Low Level Reset
+REM Low Level Module   JP#LOW_RST,INIT=3
+REM ===========================================
+REM 'Needle Calibration Reset
+REM Needle Cal Module   JP#NDL_RST,INIT=4
+REM ===========================================
+REM 'Part Manager Reset
+   JP#PMG_RST,INIT=5
+REM ===========================================
+REM 'Board Locator Reset
+REM Board Locator Module   JP#LOC_RST,INIT=6
+REM ===========================================
+REM 'Gear Pump/Recirc Reset
+REM   JP#PMP_RST,INIT=7
+REM ===========================================
+REM 'Material Air Pressure Reset
+REM Material Pressure   JP#PRS_RST,INIT=8
+REM ===========================================
+REM 'Bi-Directional Reset
+REM   JP#BID_RST,INIT=9
+REM ===========================================
+REM 'VPX Reset
+REM   JP#VPX_RST,INIT=10
+REM ===========================================
+REM 'Shot Scale Reset
+REM   JP#SCL_RST,INIT=11
+REM ===========================================
+REM 'Heater Reset
+REM   JP#HTR_RST,INIT=12
+REM ===========================================
+REM 'Spray Width Reset
+REM   JP#WID_RST,INIT=13
+REM ===========================================
+REM 'Convyor Adjust Reset
+REM cWidth Adjust Module   JP#CWA_RST,INIT=14
+REM ===========================================
+REM 'Valve Adjust Reset
+REM Width Adjust Module   JP#VWA_RST,INIT=15
+REM ===========================================
+REM 'Laser Reset
+REM   JP#LAS_RST,INIT=16
+REM ===========================================
+REM 'Indicator Reset
+REM   JP#IND_RST,INIT=17
+REM ===========================================
+REM 'JDX Reset
+REM   JP#JDX_RST,INIT=18
+REM ===========================================
+REM 'SVX Reset
+REM   JP#SVX_RST,INIT=19
+REM ===========================================
+REM 'Barcode Scanner Reset
+REM   JP#SCN_RST,INIT=20
+REM ===========================================
+REM 'Ionizer Reset
+REM   JP#ION_RST,INIT=21
+REM ===========================================
+EN
+
+REM ===============================================
+REM  Position Error Routine (Thread 0)
+REM ===============================================
+#POSERR
+   HX1;HX2;HX3;HX4;HX5;HX6;HX7
+   ST;AM;MO
+   OP $0,$FFE0,$FFFF
+   vSYSPG=0
+   SX0
+   vCONT=0
+   JS#S1022
+   TEACH=0;POS_VAL=0;FPOWER=0
+   MEC=1011;MERR=MEC
+   XQ#LT_FLSH,1;JS#ER_WT
+   MERR=0
+   HX1;ZS0;DP 0,0,0,0
+   JP#AUTO1
+
+REM ===============================================
+REM  Limit Error Routine (Thread 0)
+REM ===============================================
+#LIMSWI
+   TEACH=0
+   POS_VAL=0
+   HX1;HX2;HX3;HX4;HX5;HX6;HX7
+   ST;AM;MO
+   SX0
+   MEC=1012;MERR=MEC
+   FPOWER=0
+   OP $0,$FFE0,$FFFF
+   vSYSPG=0
+   vCONT=0
+   JS#S1023
+   XQ#LT_FLSH,1
+   JS#ER_WT
+   MERR=0
+   HX1;ZS0;DP 0,0,0,0
+   JP#AUTO1
+
+REM ===============================================
+REM  Startup Delay for Fan
+REM ===============================================
+#FAN_WT
+   HX1
+   CB oALM;SB oRED
+   FAN_WT=(60000*ms)
+   FAN_INC=(1000*ms)
+   JS#S2030
+   WT(2000*ms)
+   JP#FAN_ER,@IN[iFLOW]=1
+   JS#S2031
+
+#FAN_WT1
+   WT FAN_INC
+   FAN_WT=(FAN_WT-FAN_INC)
+   JP#FAN_ER,@IN[iFLOW]=1
+   JP#FAN_WT1,FAN_WT>0
+   FAN_ERR=0
+   FANPASS=1
+EN
+
+#FAN_ER
+   ZS1
+   FAN_ERR=1
+   FANPASS=0
+   JP#ESTOP
+
+REM ===============================================
+REM  Machine Error Subroutines (Thread 0)
+REM ===============================================
+#ER_WT
+   JP#ER_CLR,vCONT=1
+   JP#ER_WT
+
+#ER_CLR;vCONT=0;EN
+
+REM ===============================================
+REM  Pre-Start Routines
+REM ===============================================
+#PRE_CHK
+   JP#S2063,IO_FAIL=1
+   JS#INIT
+   JS#CLR_RMT
+   JS#FAN_WT,((1-FANPASS)*XFL_EN)
+   JS#SF_MN,PASSED=0
+   SB oPOWER
+   WT(1000*ms)
+   JP#PRE_HM,POS_VAL=0
+   ACM_ER=(@ABS[_TEX]+@ABS[_TEY]+@ABS[_TEZ]+@ABS[_TEW])
+   JP#PRE_HM,ACM_ER>800
+   XQ#CS_MN1,1
+EN
+
+#PRE_HM;POS_VAL=0;XQ#CS_MN,1;EN
+
+REM =============================================
+REM  Start-up Safety Check (Thread 0)
+REM =============================================
+#SF_MN
+   MO
+   SUPPRESS=0  ;'Enable/Disable Extra Checks
+
+REM===========================
+REM Check Variables:
+REM 0 - Check has not been initiated
+REM 1 - Checking Loss of Control Power
+REM 2 - Checking Restoration of Control Power
+REM 3 - Check Complete
+REM===========================
+
+   POWER=0
+   DOOR=0
+   STOP=0
+   SF_ER=0
+
+REM--------------------
+REM Press Cont to Initiate
+REM--------------------
+   JS#S1053
+
+   JS#W_VCONT
+   JS#BT_REL
+
+#SF_LP
+   JP#SF_CP,POWER<>3
+   JP#SF_ES,STOP<>3
+   JP#SF_DR,DOOR<>3
+#POST
+   PASSED=1
+   DA POWER,DOOR,STOP,SFTO,SUPPRESS
+   DA ATIME
+   JS#BURN
+EN
+
+#SF_RS
+   SF_ER=SF_ER+1
+   JP#SF_OPTO,(SF_ER<100)
+   ZS1
+#SF_RS1
+   JS#S2052,(@IN[iBYPASS]=0)
+   JP#SF_RS1,(@IN[iBYPASS]=0)
+   JS#S2041,(@IN[iESTOP]=1)
+   JP#SF_RS1,((@IN[iESTOP]=1)&(STOP<>2))
+   JS#S2043,(@IN[iDOOR]=0)
+   JP#SF_RS1,((@IN[iDOOR]=0)&(DOOR<>2))
+   SF_ER=0
+   JP#SF_LP
+
+REM============================
+REM General Safety Example
+REM============================
+REM================================================================
+REM #SF_GEN
+REM   ATIME=3000*ms    'Set Timeout for this Operation
+REM   JS#S0000         'Jump to Break/Open/Press Message
+REM   SENINP=iINPUT    'Set SENINP to Input Variable
+REM   ZORO=0           'Set Desired Value for that Input
+REM   CHECK=1          'Set Check Variable to 1
+REM   JS#SF_OPTO       'Jump to Monitor that Input
+REM   SENINP=iPOWER    'Set SENINP to Control Power Input
+REM   ZORO=0           'Check for Control Power to be Lost
+REM   JS#SF_OPTO       'Jump to Monitor Control Power Input
+REM   JS#S0001         'Jump to Clear/Close/Undo Message
+REM   SENINP=iPOWER    'Set SENINP to Control Power Input
+REM   ZORO=1           'Check for Control Power to be Restored
+REM   CHECK=2          'Set Check Variable to 2
+REM   JS#SF_OPTO       'Jump to Monitor the Control Power Input
+REM   CHECK=3          'Set Check Variable to 3
+REM   WT200            'Wait
+REM   JP#SF_LP         'Return to Safety Loop
+REM================================================================
+
+REM----------------------
+REM Control Power Safety
+REM----------------------
+
+#SF_CP
+   ATIME=(3000*ms)
+   CB oPOWER
+   JS#SF_OPTO(iPOWER,0,TIME)
+   POWER=1
+   SB oPOWER
+   POWER=2
+   JS#SF_OPTO(iPOWER,1,TIME)
+   POWER=3
+   WT(200*ms)
+   JP#SF_LP
+
+REM--------------------
+REM EStop Safety
+REM--------------------
+#SF_ES
+   ATIME=(8000*ms)
+   JS#S2040
+   STOP=1
+   JS#SF_OPTO(iESTOP,1,TIME)
+   STOP=2
+   JS#SF_OPTO(iPOWER,0,TIME)
+   JS#S2041
+   STOP=1
+   JS#SF_OPTO(iESTOP,0,TIME)
+   STOP=2
+   JS#SF_OPTO(iPOWER,1,TIME)
+   STOP=3
+   WT(200*ms)
+   JP#SF_LP
+
+REM--------------------
+REM Front Door Safety
+REM--------------------
+#SF_DR
+   ATIME=(8000*ms)
+   JS#S2042
+   DOOR=1
+   JS#SF_OPTO(iDOOR,0,TIME)
+   DOOR=2
+   JS#SF_OPTO(iPOWER,0,TIME)
+   JS#S2043
+   DOOR=1
+   JS#SF_OPTO(iDOOR,1,TIME)
+   DOOR=2
+   JS#SF_OPTO(iPOWER,1,TIME)
+   DOOR=3
+   WT(200*ms)
+   JP#SF_LP
+
+#SF_ERR
+REM ======================================
+REM Values for SFTO come from the sum of all check variables
+REM (so we know where we were in the check process and can throw
+REM  the appropriate safety fail message)
+REM
+REM  An SFTO that is divisible by 3 is not possible
+REM  (any check variable that is set to 3 is a successful check)
+REM ======================================
+   RESULT=(SFTO%3)
+   JS#S1050,RESULT=2  ;'Control Power Safety Check Failed
+   JS#S1051,SFTO=4    ;'E-Stop Safety Check Failed
+   JS#S1052,SFTO=7    ;'Front Door Safety Check Failed
+   JS#W_VCONT
+   SFTO=0
+   ZS1
+   JP#SF_MN
+
+REM ===============================================
+REM Safety Check Timeout
+REM ===============================================
+REM   ^a : SENINP - input bit
+REM   ^b : ZORO - desired state of input bit
+REM   ^c : TIME - time when JS#SF_OPTO was called
+REM ===============================================
+#SF_OPTO
+   JP#SF_RS,((@IN[iESTOP])*((STOP<>2)*(STOP<>1)))
+   JP#SF_RS,((1-@IN[iDOOR])*((DOOR<>2)*(DOOR<>1)))
+   JP#SF_RS,(@IN[iBYPASS]=0)
+   JP#NOOP,@IN[^a]=^b
+   JP#SF_OPTO,((TIME-(^c))<ATIME)
+   SFTO=POWER+STOP+DOOR
+   JP#SF_ERR
+REM =================================
+
+REM ===============================================
+REM  Initialization Routine (Thread 0)
+REM ===============================================
+#INIT
+   vSYSPG=3
+   HX1;HX2;HX3;HX4;HX5;HX6;HX7
+   INIT=0;CO 1
+   OP $0,$FFE0,$FFFF
+   vSYSPG=3
+   ms=1.024
+
+REM-------------------------------------
+REM  Portal & Periodic Position Arrays
+REM-------------------------------------
+   DM bMAN[8]
+   DM bAUTO[3]
+   DM lstMAN[2]
+   DM nPROCESS[6],bPROCESS[6]
+   DM User[31]
+   DM PROP[100]
+
+   DM PT_CAL1[4],PT_CAL2[4],PT_CAL3[4],PT_CAL4[4],PT_CAL5[4],PT_CAL6[4]
+   DM IO_STATE[50]
+
+   JS#ST_INIT
+
+   DM CHEAD[15]
+
+REM-------------------------------------
+REM  Analog Monitoring Arrays
+REM-------------------------------------
+
+   DM AN_TM[9],AN_ACT[9],AN_VDC[9],AN_AVG[9],AN_OFF[19]
+   DM AN_SAMP[9],AN_ERR[9]
+
+REM----------------------------------------------------
+REM                   Constants
+REM ---------------------------------------------------
+REM           1=true 0=false -> Variables
+REM            0=on  1=off -> Galil I/O
+REM           1=on  0=off -> Extended I/O
+REM          1=FAST 2=SLOW -> Trackball Speed
+REM         0=x 1=y 2=z -> Skew/Fid Correction
+
+   JS#BT_REL
+
+   CB37;CSS;CST
+   CVFLAG=0
+   PMX=2
+
+   WT(2000*ms)
+
+REM--------------------
+REM  Portal Controls
+REM--------------------
+   vCONT=0
+   vPRD_SEL=6
+   vSYSPG=0
+   vPAGE=0
+   vCOLOR=0
+   cCRC=""
+   dmcFLAG=0
+
+   vQUIT=1
+   SHT_VB=0
+   vSTOPMSG=2000
+
+   pmFLAG=-99
+
+   bAUTO[0]=0
+   bAUTO[1]=0
+   bAUTO[2]=0
+   lstAUTO=1
+   vAUTOVIS="000"
+   vAUTOMSG=0
+   QA=0
+
+   JS#BOOL_I
+   lstMAN[0]=0
+   lstMAN[1]=0
+   vRUN=0
+
+   lstREF=1
+   CHEAD=1
+   vHEAD=1
+
+REM--------------------
+REM  State Flags
+REM--------------------
+   ACFLAG=0;AC_INIT=0
+   MODE=0;ST_BY=0
+   PLYBCK=0
+   HOMING=0
+   TEACH=0
+   BURN=0
+   UNS_ERR=0
+
+   LT_STAT=1000
+   LT_STOR=0
+   LT_DIGIT=0
+   DM BLNK_TM[5]
+   BLNK_TM[1]=TIME;BLNK_TM[2]=TIME;BLNK_TM[3]=TIME;BLNK_TM[4]=TIME
+
+   CBFLAG=1
+   IN_MSG=0
+
+REM--------------------
+REM  Error Flags
+REM--------------------
+   DG_ERR=0
+   DRFLAG=1
+   MERR=0;MEC=0
+   FPOWER=0;KEY1=0
+   VPNTO=0;PNEC=0;SENINP=0
+   FAN_ERR=0
+   WD_ERR=0
+   WD_TO=2000
+
+REM--------------------
+REM Custom Positions
+REM--------------------
+   DM RETEACH[5]
+   RETEACH[0]=0   ;'Currently Reteaching 1=Solvent, 2=Purge, 3=Standby
+   RETEACH[1]=0   ;'Reteach Dropdown Select
+   RETEACH[2]=0   ;'Reteach Go Button
+
+   DM POSITION[7]
+   POSITION[0]="";POSITION[1]=""
+   POSITION[2]="";POSITION[3]=""
+   POSITION[4]="";POSITION[5]=""
+   POSITION[6]=""
+
+REM--------------------
+REM  Auto Purge
+REM--------------------
+   AP_TE=0
+   AP_TP=TIME
+   AP_OUT=1
+   PING=0
+
+REM--------------------
+REM  State Flags
+REM--------------------
+   CAL=0
+
+REM--------------------
+REM  Atom Air Monitoring
+REM--------------------
+   AIR_FLG=0
+   AIR_ERR=0
+   AN_TO=500
+
+REM--------------------
+REM  Counters
+REM--------------------
+   CTM=0
+
+REM ===========================
+REM Path RUNNING
+REM ===========================
+   RUNNING=0
+
+REM--------------------
+REM  Misc
+REM--------------------
+   CAXIS=1
+
+REM--------------------
+REM  Integer Limits
+REM--------------------
+   MAX_INT=2147483647
+   MIN_INT=-2147483648
+   
+   vTEACH=0
+
+   JS#IMACH
+   JS#ST_INIT
+   JS#VS_INIT
+
+REM ===========================================
+REM   Module Global Variable Initialization
+REM ===========================================
+REM 'Flow Monitor Initialize
+REM Flow Monitor Module    JS#FLO_INI
+REM ===========================================
+REM 'GSE Scale/Digital Low Level Initialize
+REM Low Level Module   JS#LOW_INI
+REM ===========================================
+REM 'Needle Calibration Initialize
+REM Needle Cal Module   JS#NDL_INI
+REM ===========================================
+REM 'Part Manager Initialize
+   JS#PMG_INI
+REM ===========================================
+REM 'Board Locator Initialize
+REM Board Locator Module   JS#LOC_INI
+REM ===========================================
+REM 'Gear Pump/Recirc Initialize
+REM   JS#PMP_INI
+REM ===========================================
+REM 'Material Air Pressure Initialize
+REM Material Pressure   JS#PRS_INI
+REM ===========================================
+REM 'Bi-Directional Initialize
+REM   JS#BID_INI
+REM ===========================================
+REM 'VPX Initialize
+REM   JS#VPX_INI
+REM ===========================================
+REM 'Shot Scale Initialize
+REM   JS#SCL_INI
+REM ===========================================
+REM 'Heater Initialize
+REM   JS#HTR_INI
+REM ===========================================
+REM 'Spray Width Initialize
+REM   JS#WID_INI
+REM ===========================================
+REM 'Conveyor Adjust Initialize
+REM cWidth Adjust Module   JS#CWA_INI
+REM ===========================================
+REM 'Valve Adjust Initialize
+REM vWidth Adjust Module   JS#VWA_INI
+REM ===========================================
+REM 'Laser Initialize
+REM   JS#LAS_INI
+REM ===========================================
+REM 'Indicator Initialize
+REM   JS#IND_INI
+REM ===========================================
+REM 'JDX Initialize
+REM   JS#JDX_INI
+REM ===========================================
+REM 'SVX Initialize
+REM   JS#SVX_INI
+REM ===========================================
+REM 'Barcode Scanner Initialize
+REM   JS#SCN_INI
+REM ===========================================
+REM 'Ionizer Initialize
+REM   JS#ION_INI
+REM ===========================================
+
+   tAXES=AXES
+   XDE=2
+   SX0
+
+   XDE=41
+   GS#IPROG,#EOM
+   XDE=0
+   JS#IPROG
+   INIT=1
+   JS#CHECK
+   JP#INIT2,CPROG1<=KNPROG
+   CPROG1=1
+
+#INIT2
+   CPROG=CPROG1
+   JS#LPPROG
+   JS#S2000
+   INIT=0
+   VLV=VSTORE
+EN
+
+#ST_INIT
+   INDX=0
+#ST_INLP
+   IO_STATE[INDX]=0
+   INDX=INDX+1
+   JP#ST_INLP,INDX<50
+EN
+
+REM ==================================
+REM  Init Man Bool Objects (options)
+REM ==================================
+#BOOL_I
+   I=0
+#B_LP
+   bMAN[I]=0
+   I=I+1
+   JP#B_LP,I<8
+EN
+
+REM ===============================================
+REM  Check Variables And Reset Routines (Thread 0)
+REM ===============================================
+#CHECK
+REM--------------------
+REM  Portal Controls
+REM--------------------
+   JP#RESET,CPROG<1
+   JP#RESET,CPROG>KNPROG
+   JP#RESET,CPROG1<1
+   JP#RESET,CPROG2<1
+
+REM---------------------
+REM  Exhaust Check
+REM---------------------
+   JP#RESET,XFL_EN<0
+
+REM--------------------
+REM  State Flags
+REM--------------------
+   JP#RESET,CAL<0
+   JP#RESET,POS_VAL<0
+
+REM--------------------
+REM  Error Flags
+REM--------------------
+   JP#RESET,FANPASS<0
+
+REM--------------------
+REM Valve Stored State
+REM--------------------
+   JP#RESET,VSTORE<0
+
+REM--------------------
+REM Custom Positions
+REM--------------------
+   JP#RESET,PT_SBY[0]<_BLX
+   JP#RESET,PT_APG[0]<_BLX
+   JP#RESET,PT_SOL[0]<_BLX
+
+   JP#RESET,RS_SBY<0
+   JP#RESET,RS_APG<0
+   JP#RESET,RS_SOL<0
+
+REM--------------------
+REM  Auto Purge
+REM--------------------
+   JP#RESET,AP_EN<0
+   JP#RESET,AP_TIME<0
+   JP#RESET,AP_LEN<0
+
+REM--------------------
+REM  Solvent
+REM--------------------
+   JP#RESET,SO_EN<0
+   JP#RESET,SLP_TM<0
+
+REM -------------------
+REM Pressure Monitoring
+REM ----------------
+   JP#RESET,H1AA_EN<0
+   JP#RESET,AA1_HI<0
+   JP#RESET,AA1_LO<0
+
+   JP#RESET,H2AA_EN<0
+   JP#RESET,AA2_HI<0
+   JP#RESET,AA2_LO<0
+
+REM--------------------
+REM Data Logging
+REM--------------------
+   JP#RESET,LOG_EN<0
+
+REM--------------------
+REM Counters
+REM -------------------
+   JP#RESET,CCNT<0
+
+REM--------------------
+REM Vision
+REM--------------------
+   JP#RESET,FID_EN<0
+   JP#RESET,VSL_EN<0
+   JP#RESET,THTA_EN<0
+
+REM--------------------
+REM Light Controls
+REM--------------------
+   JP#RESET,WHL_EN<0
+   JP#RESET,BLK_EN<0
+
+   JP#RESET,TOOLX[0]<0
+   JP#RESET,TOOLY[0]<0
+   JP#RESET,TOOLZ[0]<0
+   JP#RESET,TOOLW[0]<0
+
+REM ===========================================
+REM   Module Check Variable Routines
+REM ===========================================
+REM 'Flow Monitor Check
+REM Flow Monitor Module    JS#FLO_CHK
+REM ===========================================
+REM 'GSE Scale/Digital Low Level Check
+REM Low Level Module   JS#LOW_CHK
+REM ===========================================
+REM 'Needle Calibration Check
+REM Needle Cal Module   JS#NDL_CHK
+REM ===========================================
+REM 'Part Manager Check
+   JS#PMG_CHK
+REM ===========================================
+REM 'Board Locator Check
+REM Board Locator Module   JS#LOC_CHK
+REM ===========================================
+REM 'Gear Pump/Recirc Check
+REM   JS#PMP_CHK
+REM ===========================================
+REM 'Material Air Pressure Check
+REM Material Pressure   JS#PRS_CHK
+REM ===========================================
+REM 'Bi-Directional Check
+REM   JS#BID_CHK
+REM ===========================================
+REM 'VPX Check
+REM   JS#VPX_CHK
+REM ===========================================
+REM 'Shot Scale Check
+REM   JS#SCL_CHK
+REM ===========================================
+REM 'Heater Check
+REM   JS#HTR_CHK
+REM ===========================================
+REM 'Spray Width Check
+REM   JS#WID_CHK
+REM ===========================================
+REM 'Conveyor Adjust Check
+REM cWidth Adjust Module   JS#CWA_CHK
+REM ===========================================
+REM 'Valve Adjust Check
+REM vWidth Adjust Module   JS#VWA_CHK
+REM ===========================================
+REM 'Laser Check
+REM   JS#LAS_CHK
+REM ===========================================
+REM 'Indicator Check
+REM   JS#IND_CHK
+REM ===========================================
+REM 'JDX Check
+REM   JS#JDX_CHK
+REM ===========================================
+REM 'SVX Check
+REM   JS#SVX_CHK
+REM ===========================================
+REM 'Barcode Scanner Check
+REM   JS#SCN_CHK
+REM ===========================================
+REM 'Ionizer Check
+REM   JS#ION_CHK
+REM ===========================================
+
+   DA TRY_RES
+   JS#BURN
+EN
+
+REM ===============================================
+REM  Parameter Reset
+REM ===============================================
+#RESET
+   JS#S2001
+   WT(1000*ms)
+   HX1;HX2;HX3;HX4;HX5;HX6;HX7
+
+REM--------------------
+REM  Portal Controls
+REM--------------------
+   DM nMAN[3]
+   DM nSETUP[2]
+   DM bSETUP[4]
+   DM TOOLX[100],TOOLY[100],TOOLZ[100],TOOLW[100]
+
+   TOOLX[0]=0
+   TOOLY[0]=0
+   TOOLZ[0]=0
+   TOOLW[0]=0
+
+   nMAN[0]=0
+   nMAN[1]=0
+   nMAN[2]=0
+
+   nSETUP[0]=0
+   nSETUP[1]=0
+
+   bSETUP[0]=0
+   bSETUP[1]=0
+   bSETUP[2]=0
+   bSETUP[3]=0
+
+   CPROG=1
+   CPROG1=1
+   CPROG2=2
+
+REM---------------------
+REM  Exhaust Check
+REM---------------------
+   XFL_EN=1
+
+REM--------------------
+REM  State Flags
+REM--------------------
+   CAL=0
+   POS_VAL=0
+
+REM--------------------
+REM  Error Flags
+REM--------------------
+   FANPASS=0
+
+REM--------------------
+REM Custom Positions
+REM--------------------
+   DM PT_SBY[4],PT_APG[4],PT_SOL[5]
+
+   PT_SBY[0]=45000;PT_SBY[1]=45000;PT_SBY[2]=0;PT_SBY[3]=16767
+   PT_APG[0]=45000;PT_APG[1]=45000;PT_APG[2]=0;PT_APG[3]=16767
+   PT_SOL[0]=45000;PT_SOL[1]=45000;PT_SOL[2]=0;PT_SOL[3]=16767
+
+   RS_SBY=1 ;'Need to reset standby
+   RS_APG=1 ;'Need to reset purge
+   RS_SOL=1 ;'Need to reset solvent
+
+REM--------------------
+REM  Auto Purge
+REM--------------------
+   AP_EN=0
+   AP_LEN=2000
+   AP_TIME=30000
+
+REM--------------------
+REM  Solvent
+REM--------------------
+   SO_EN=0
+   SLP_TM=30000
+
+REM -------------------
+REM Atom Air
+REM--------------------
+   H1AA_EN=0
+   AA1_HI=5
+   AA1_LO=3
+
+   H2AA_EN=0
+   AA2_HI=5
+   AA2_LO=3
+
+REM--------------------
+REM Data Logging
+REM--------------------
+   LOG_EN=0
+
+REM--------------------
+REM Counters
+REM -------------------
+   CCNT=0
+
+REM--------------------
+REM Vision
+REM -------------------
+   FID_EN=0
+   VSL_EN=0
+   THTA_EN=0
+
+REM--------------------
+REM Light Controls
+REM--------------------
+   WHL_EN=0
+   BLK_EN=0
+
+   VSTORE=1
+
+   PASSED=0
+   
+   
+   M_SETUP=0   
+
+   JS#U100
+
+   ZS0
+   JP#AUTO2
+
+REM ===============================================
+REM  Load Program Routine (Thread 0)
+REM ===============================================
+#LPPROG;XDE=41;JP#RB1,CPROG>16;JP#LB1,CPROG<16;GS#PROG16,#PROG;JP#LX
+
+REM ======Left Branches======
+#LB1;JP#LB2,CPROG<8;JP#LB3,CPROG>8;GS#PROG8,#PROG;JP#LX
+#LB2;JP#LB4,CPROG<4;JP#LB5,CPROG>4;GS#PROG4,#PROG;JP#LX
+#LB3;JP#LB6,CPROG<12;JP#LB7,CPROG>12;GS#PROG12,#PROG;JP#LX
+#LB4;JP#LB8,CPROG<>2;GS#PROG2,#PROG;JP#LX
+#LB5;JP#LB9,CPROG<>6;GS#PROG6,#PROG;JP#LX
+#LB6;JP#LB10,CPROG<>10;GS#PROG10,#PROG;JP#LX
+#LB7;JP#LB11,CPROG<>14;GS#PROG14,#PROG;JP#LX
+#LB8;IF(CPROG=1);GS#PROG1,#PROG;ELSE;GS#PROG3,#PROG;ENDIF;JP#LX
+#LB9;IF(CPROG=5);GS#PROG5,#PROG;ELSE;GS#PROG7,#PROG;ENDIF;JP#LX
+#LB10;IF(CPROG=9);GS#PROG9,#PROG;ELSE;GS#PROG11,#PROG;ENDIF;JP#LX
+#LB11;IF(CPROG=13);GS#PROG13,#PROG;ELSE;GS#PROG15,#PROG;ENDIF;JP#LX
+
+REM ======Right Branches======
+#RB1;JP#RB2,CPROG<24;JP#RB3,CPROG>24;GS#PROG24,#PROG;JP#LX
+#RB2;JP#RB4,CPROG<20;JP#RB5,CPROG>20;GS#PROG20,#PROG;JP#LX
+#RB3;JP#RB6,CPROG<28;JP#RB7,CPROG>28;GS#PROG28,#PROG;JP#LX
+#RB4;JP#RB8,CPROG<>18;GS#PROG18,#PROG;JP#LX
+#RB5;JP#RB9,CPROG<>22;GS#PROG22,#PROG;JP#LX
+#RB6;JP#RB10,CPROG<>26;GS#PROG26,#PROG;JP#LX
+#RB7;JP#RB11,CPROG<>30;GS#PROG30,#PROG;JP#LX
+#RB8;IF(CPROG=17);GS#PROG17,#PROG;ELSE;GS#PROG19,#PROG;ENDIF;JP#LX
+#RB9;IF(CPROG=21);GS#PROG21,#PROG;ELSE;GS#PROG23,#PROG;ENDIF;JP#LX
+#RB10;IF(CPROG=25);GS#PROG25,#PROG;ELSE;GS#PROG27,#PROG;ENDIF;JP#LX
+#RB11;IF(CPROG=29);GS#PROG29,#PROG;ELSE;GS#PROG31,#PROG;ENDIF;JP#LX
+
+#LX
+   XDE=0
+EN
+
+
+REM ===============================================
+REM  Home Routine (Thread 1)
+REM ===============================================
+#MV_HOME
+   JS#DR_CLOS
+   JS#BT_REL
+   JS#S1013,CAL<>0
+   JS#S2002
+   POS_VAL=0
+   HOMING=1
+   JS#TUNE
+   STXYZ;AMXYZ
+   IF(AXES=4)
+      STW;AMW
+   ENDIF
+   FL 200000,200000,200000
+   BL -200000,-200000,-200000
+   AC 150000,150000,150000/SCALE_Z
+   DC 150000,150000,150000/SCALE_Z
+   OE*=1
+   JS#ALLUP
+   ER 1000,1000,1000
+   SHXYZ
+
+   IF(AXES=4)
+      FLW=200000
+      BLW=-200000
+      ACW=150000
+      DCW=150000
+      ERW=1000
+      SHW
+   ENDIF
+
+REM ----------------
+REM  Z-Axis
+REM ----------------
+   FEZ;SPZ=30000/SCALE_Z
+   BGZ;AMZ
+   PR,,1500
+   BGZ;AMZ
+   FEZ;SPZ=2000/SCALE_Z
+   BGZ;AMZ
+   PR,,1000;SPZ=20000/SCALE_Z
+   BGZ;AMZ
+   DPZ=0
+   FLZ=30000
+   BLZ=-3000
+
+REM =============================
+REM  Execute Conveyor Width Home
+REM =============================
+REM cWidth Adjust Module   HX3
+REM cWidth Adjust Module   XQ#CWA_HM,3
+REM =============================
+REM  Execute Valve Width Home
+REM =============================
+REM Width Adjust Module   HX4
+REM Width Adjust Module   XQ#VWA_HM,4
+REM =============================
+
+REM ----------------
+REM  W-Axis
+REM ----------------
+IF (AXES=4)
+   FEW;SPW=4000
+   BGW;AMW;PR,,,4000;BGW;AMW;FEW;SPW=1000;BGW;AMW
+   PR,,,2000;SPW=4000;BGW;AMW;DPW=0
+   SPW=25000;PRW=33000;BGW;AMW
+   FLW=30000;BLW=-3000
+ENDIF
+
+REM ----------------
+REM  X&Y-Axis
+REM ----------------
+   FEXY
+   SP 10000,10000
+   BGXY;AMXY
+   PR 3000,3000
+   SP 500,500
+   BGXY;AMXY
+   FEXY
+   SP 500,500
+   BGXY;AMXY
+   PR 3000,3000
+   SP 2000,2000
+   BGXY;AMXY
+   DP 0,0
+
+REM =============================
+REM  Wait For Conveyor Width Home
+REM =============================
+REM cWidth Adjust Module   #CWT_HM
+REM cWidth Adjust Module      JP#CWT_HM,(_XQ3>0)
+REM =============================
+REM  Wait For Valve Width Home
+REM =============================
+REM   #VWT_HM
+REM      JP#VWT_HM,(_XQ4>0)
+REM =============================
+
+   JS#TUNE
+   POS_VAL=1
+   HOMING=0
+EN
+
+REM ===============================================
+REM  Move To Stand-By Routine (Thread 1)
+REM ===============================================
+#MV_SBY
+   JS#DR_CLOS
+   JS#ALLUP
+   SP 60000,60000,100000/SCALE_Z
+   AC 150000,150000,150000/SCALE_Z
+   DC 150000,150000,150000/SCALE_Z
+   SHXYZ
+   DELTAS=@ABS[_TPX-PT_SBY[0]]+@ABS[_TPY-PT_SBY[1]]+@ABS[_TPZ-PT_SBY[2]]
+
+   IF(AXES=4)
+      SPW=60000
+      ACW=150000
+      DCW=150000
+      SHW
+      DELTAS=DELTAS+@ABS[_TPW-PT_SBY[3]]
+   ENDIF
+
+   JS#SAFEZ,DELTAS>10
+   PA PT_SBY[0],PT_SBY[1],PT_SBY[2]
+   BGXY;AMXY
+
+   IF((AXES=4)&(1-(MODE*THTA_EN)))
+      PAW=PT_SBY[3]
+      BGW;AMW
+   ENDIF
+
+   BGZ;AMZ
+   JS#TUNE
+   ST_BY=1
+EN
+
+REM ===============================================
+REM  Move To Solvent Cup Routine (Thread 1)
+REM ===============================================
+#MV_SOL
+   JS#DR_CLOS
+   SP 100000,100000,100000/SCALE_Z
+   AC 200000,200000,200000/SCALE_Z
+   DC 200000,200000,200000/SCALE_Z
+   SHXYZ
+   DELTAS=@ABS[_TPX-PT_SOL[0]]+@ABS[_TPY-PT_SOL[1]]+@ABS[_TPZ-PT_SOL[2]]
+
+   IF(AXES=4)
+      SPW=100000
+      ACW=200000
+      DCW=200000
+      SHW
+      DELTAS=DELTAS+@ABS[_TPW-PT_SOL[3]]
+   ENDIF
+
+   JS#C2003,DELTAS>10
+   JS#SAFEZ,DELTAS>10
+   PA PT_SOL[0],PT_SOL[1],PT_SOL[2]
+   BGXY;AMXY
+
+   IF (AXES=4)
+      PAW=PT_SOL[3]
+      BGW;AMW
+   ENDIF
+
+   BGZ;AMZ
+   JS#ALLDW
+   JS#TUNE
+   ST_BY=0
+EN
+
+REM ===============================================
+REM  Clear Board Routine (Thread 1)
+REM ===============================================
+#CLRBD
+   JS#S3000
+   DRFLAG=0
+   CNV_TMR=TIME
+   JS#CNV_ON,@IN[iPIP3]=0
+
+#CLR_LP
+   JS#CLR_RST,@IN[iPIP1]=1
+   JS#CLR_RST,@IN[iPIP2]=1
+   JP#CLR_DN,@IN[iPIP3]=1
+   JP#CLR_LP,(TIME-CNV_TMR)<(3000*ms)
+
+#CLR_DN
+   JS#CNV_OF
+   JS#S3001,@IN[iPIP3]=1
+
+#CLR_WT
+   JS#CLR_RST,(TIME-CNV_TMR)<(3000*ms)
+   JP#CLR_WT,@IN[iPIP3]=1
+   JP#CLRBD,(TIME-CNV_TMR)<(3000*ms)
+   CBFLAG=0
+   JS#DR_CLOS
+EN
+
+#CLR_RST
+   CNV_TMR=TIME
+EN
+
+REM ===============================================
+REM  Cyclestop Routine (Thread 1)
+REM ===============================================
+#CS_MN
+   JP#CS_MN,FPOWER=0
+   JS#S1000
+   JS#W_VCONT
+   JS#MV_HOME
+   JS#VS_TOFF
+
+
+#CS_MN1
+   JP#CS_MN1,FPOWER=0
+   JS#MAIN_IO
+   JS#UNS_PNG
+   dmcFLAG=5
+
+REM ===============================================
+REM   P-Select Dropdown Disable
+REM ===============================================
+   IF(PMGR_EN)
+     vPRD_SEL=6
+   ELSE
+     vPRD_SEL=1
+   ENDIF
+REM ===============================================
+
+REM ================================
+REM      Pump Off / Recirc On
+REM ================================
+REM   JS#PMP_ST
+REM ================================
+
+REM ================================
+REM           Heater On
+REM ================================
+REM   JS#HTR_ON,HTR_EN
+REM ================================
+
+REM ================================
+REM     Scale Low Warning Reset
+REM ================================
+REM   JS#LOW_WRS
+REM ================================
+
+REM ================================
+REM           Ionizer Off
+REM ================================
+REM   JS#ION_OF
+REM ================================
+
+   vSYSPG=0
+   cCRC=""
+   IF (VSL_EN=1)
+      cPING = NULL
+      JS#VS_PING
+      WT(100*ms)
+      JS#VS_LIVE,(cPING<>NULL)
+      JS#VS_L1ON
+   ELSE
+      JS#VS_L1OF
+   ENDIF
+
+   JS#VS_L2ON,(WHL_EN)
+   JS#VS_L3ON,(BLK_EN)
+   JS#VS_CHDS,(cPING<>NULL)
+   JS#SK_CLR
+
+   JS#S1013,CAL<>0
+
+   JP#CS_MN,POS_VAL=0
+
+   JS#S1700,((RS_SBY+RS_APG+RS_SOL)>0)
+
+   JS#MV_SOL,SO_EN=1
+   JS#MV_SBY,SO_EN=0
+
+   JS#CLRBD,CBFLAG=1
+   WT(400*ms)
+   vPAGE=0
+   JS#BT_REL
+   JS#C2001
+   LT_STAT=1000
+   RUNNING=0
+
+#CS_LP
+   JP#MA_MN,vMANUAL=1
+   JP#AC_MN,vAUTO=1
+   JP#SU_MN,vSETUP=1
+   JS#CS_AP,(AP_TE*AP_OUT*(1-SO_EN))>AP_TIME
+   JP#CS_LP
+
+#CS_AP;JS#A_PURGE;JS#C2001;EN
+
+REM ===============================================
+REM  Teach Routines (Thread 1)
+REM ===============================================
+#TE_F2
+   CB oTB_RLED
+   KEY=22*TEACH
+   JP#TE_FA,RKEY=53
+   JP#TE_FA,(TIME-TETIME)>1000
+   JP#TE_F2
+
+#TE_FA
+   JP#TE_FB,RKEY=53
+   KEY=0;RKEY=0
+   JS#TKEYREL
+   IF (TB_SPD=2)
+      SB oTB_RLED
+   ENDIF
+EN
+
+#TE_FB
+   JS#VS_LIVE
+   vSYSPG=VSWIND
+   KEY=0;WT(100*ms);RKEY=0
+   JS#TKEYREL
+   IF (TB_SPD=2)
+      SB oTB_RLED
+   ENDIF
+   vSYSPG=0
+EN
+
+#TE_PB
+   HX2;HX3;STXYZ;IF(AXES=4);STW;ENDIF
+   KEY=44*TEACH
+   JS#U045
+   WT(2000*ms)
+   KEY=0
+   PLYBCK=0
+   JP#MA_MN1
+
+#TE_RS
+   vSYSPG=0
+   AM
+   HX0;WT(100*ms)
+   DGERR_TM=TIME
+   XQ#SCAN,0
+   JS#DR_CLOS
+   TEACH=0;KEY=0;PASSED=1
+   SP 60000,60000,100000/SCALE_Z
+   IF(AXES=4)
+      SPW=60000
+   ENDIF
+
+   IF(FID_EN=1)
+      JS#W_VBAI
+   ENDIF
+
+   JP#TE_RS1,PMX>1
+   PAZ=0;BGZ;AMZ
+
+#TE_RS1
+   JS#ALLUP,((vFUNC=3)|(VLV=2))
+   CSS;CST
+   LT_STAT=0010
+   PLYBCK=0
+
+   RUNNING=1
+   JS#PROG
+   IT*=1
+   RUNNING=0
+
+#TE_RS2
+   STXYZ;AMXYZ
+   IF(AXES=4);STW;AMW;ENDIF
+   JS#U036
+   VLV=VSTORE
+   WT(500*ms)
+   JP#MA_MN1
+
+#TE_ALRT
+   SB oTB_RLED;SB oALM;WT(70*ms);CB oALM;WT(50*ms);OB oTB_RLED,(TB_SPD=2)
+   vTEACH=0
+EN
+
+REM ===============================================
+REM  Manual Mode Functions (Thread 1)
+REM ===============================================
+#MA_MN
+   JS#BT_REL
+
+   JS#CS_AP,SO_EN
+
+   vSYSPG=VSWIND
+
+   VLV=1
+
+   JS#MV_SBY
+
+   JS#SK_CLR
+
+   TB_SPD=1
+   CB oTB_RLED
+
+   IF (VSL_EN=0)
+      vLGHT[1]=0
+   ENDIF
+
+   vLGHT[2]=0
+   vLGHT[3]=0
+
+   JS#TUNE
+   JS#ALLUP
+   JS#SAFEZ
+
+   IF (MODE=0)
+     itUPBA=iUPBA
+     itDNRDY=iDNRDY
+
+     iUPBA=99
+     iDNRDY=99
+   ENDIF
+
+   vFUNC=7
+   JS#MA_THTA
+   vFUNC=NULL
+
+#MA_MN1
+   vPAGE=1
+   vSYSPG=0
+   LT_STAT=1000
+   DRFLAG=0
+   CTM=0
+   TEACH=1
+   KEY=0
+   RKEY=0
+   CAXIS=1
+
+   IF(NO_VIS=0)
+     tAXES=3+((1-(THTA_EN))*(AXES=4))
+   ELSE
+     tAXES=AXES
+   ENDIF
+
+REM ======================================
+REM        VPX Motors On (Primed)
+REM ======================================
+REM   JS#VPX_ON
+REM   ManTUpdt=1
+REM   nPROCESS[1]=ACTDISPA/SPGRAVA
+REM   nPROCESS[4]=ACTDISPB/SPGRAVB
+REM ======================================
+
+   vZSLIDE=0
+   vROT=0
+   vSTOP=0
+   vPURGE=0
+   vCONV=0
+   vRUN=0
+   vUPRDY=0
+   vDNBA=0
+
+   fCONV=0
+   fUPRDY=0
+   fDNBA=0
+
+   JS#BT_REL
+
+   HX2
+   JS#U015,MODE=0
+   XQ#TB_XY,2;MODE=1
+
+   HX3;XQ#PENDANT,3
+
+   vFUNC=NULL
+
+#MA_LP
+   JP#MA_END,vCSTOP=1
+   TETIME=TIME
+
+   JS#MA_TOOL,vFUNC<>NULL
+   JS#TE_ALRT,vTEACH=1
+
+   JS#VV_UP,vZSLIDE=1
+   JS#VV_DW,vZSLIDE=2
+   JS#VV_RA,vROT=1
+   JS#VV_RB,vROT=2
+
+   JS#MA_STP,vSTOP<>0
+
+   JS#CVDN_ON,(vCONV=1)&(fCONV=0)
+   JS#CVUP_ON,(vCONV=2)&(fCONV=0)
+   JS#CV_OF,(vCONV=0)&(fCONV=1)
+
+   JS#TMP_SM
+
+   JS#SM_UPON,(vUPRDY=1)&(fUPRDY=0)
+   JS#SM_UPOF,(vUPRDY=0)&(fUPRDY=1)
+   JS#SM_DNON,(vDNBA=1)&(fDNBA=0)
+   JS#SM_DNOF,(vDNBA=0)&(fDNBA=1)
+
+   JS#VS_L1ON,(vLGHT[1]=1)
+   JS#VS_L1OF,(vLGHT[1]=0)
+
+REM ===============================
+REM   White Light Manual Control
+REM ===============================
+   JS#VS_L2ON,((vLGHT[2]=1)*(1-@OUT[oHSELT]))
+   JS#VS_L2OF,((vLGHT[2]=1)*(@OUT[oHSELT]))
+
+REM ===============================
+REM   Black Light Manual Control
+REM ===============================
+REM   JS#VS_L3ON,((vLGHT[3]=1)*(1-@OUT[oBLKLT]))
+REM   JS#VS_L3OF,((vLGHT[3]=1)*(@OUT[oBLKLT]))
+
+
+REM ===============================================
+REM   Module Manual Control Block
+REM ===============================================
+REM    Replace all XXXXXX with Portal Controls
+REM          Before Attempting to Use
+REM
+REM ===============================================
+REM  'Manual Board Locator Toggle
+REM Board Locator Module   JS#LOC_MAN,vLOC<>0
+REM ===============================================
+REM  'Manual VPX Routines
+REM   JS#VPX_MAN
+REM ===============================================
+REM  'Manual Shot Weight Check
+REM   JS#SCL_MAN,XXXXXX=1
+REM ===============================================
+REM  'Manual Heater Toggle
+REM   JS#HTR_MAN,XXXXXX=1
+REM ===============================================
+REM  'Manual Spray Width Check
+REM   JS#WID_MAN,XXXXXX=1
+REM ===============================================
+REM  'Manual Conveyor Adjust Routines
+REM cWidth Adjust Module   JS#CWA_MAN
+REM ===============================================
+REM  'Manual Valve Adjust Routines
+REM vWidth Adjust Module   JS#VWA_MAN
+REM ===============================================
+REM  'Manual Laser Routines
+REM   JS#LAS_MAN,((bMAN[6]=1)|(bMAN[7]=1))
+REM ===============================================
+REM  'Manual Dial Indicator Zero Reference
+REM   JS#IND_MAN,(bMAN[0]=1)
+REM ===============================================
+REM  'Manual JDX Clean
+REM   JS#JDX_CLN,XXXXXX=1
+REM ===============================================
+REM  'Manual SVX
+REM   JS#SVX_MAN
+REM ===============================================
+REM  'Manual Ionizer Toggle
+REM   JS#ION_MAN,XXXXX=1
+REM ===============================================
+
+   JP#OS_MN,vRUN<>0
+   JS#PR_MN,(vPURGE=1)
+
+   JP#TE_PB,PLYBCK=1
+
+#P_PRESS
+   JS#RM_TCH,(@IN[iTEACH]+@IN[iPURGE]+@IN[iAXIS])<3
+
+   JS#LIMITS
+   JP#MA_LP
+
+#MA_END
+   JS#LED_RS
+   TEACH=0
+   vRUN=0
+   HX3;HX2;STXYZ;AMXYZ
+   IF(AXES=4);STW;AMW;ENDIF
+   VLV=VSTORE
+   vPAGE=0
+   MODE=0
+   iUPBA=7010
+   iDNRDY=7011
+   itUPBA=99
+   itDNRDY=99
+   CB oUPRDY
+   CB oDNBA
+   JS#SK_CLR
+   JS#DR_CLOS
+   vPAGE=0
+REM ====================================
+REM   Turn Heater Off if Not Enabled
+REM ====================================
+REM   JS#HTR_OF,HTR_EN=0
+REM ====================================
+   JS#ALLUP
+   JS#ALLOFF
+   JP#CS_MN1
+
+#TMP_SM
+  IF (@IN[itUPBA]=0)
+    iUPBA=iPOWER
+  ELSE
+    iUPBA=iESTOP
+   ENDIF
+
+  IF (@IN[itDNRDY]=0)
+    iDNRDY=iPOWER
+  ELSE
+    iDNRDY=iESTOP
+  ENDIF
+EN
+
+#VV_UP
+  JS#TLUP(1,CHEAD,TYPE[CHEAD])
+  vZSLIDE=0
+EN
+
+#VV_DW
+  JS#TLDW(1,CHEAD,TYPE[CHEAD])
+  vZSLIDE=0
+EN
+
+#VV_RA
+  JS#TLRA(1,CHEAD,TYPE[CHEAD])
+  vROT=0
+EN
+
+#VV_RB
+  JS#TLRB(1,CHEAD,TYPE[CHEAD])
+  vROT=0
+EN
+
+#CVDN_ON
+REM ============================================
+REM   Bi-Directional Conveyor Run Left to Right
+REM ============================================
+REM   JS#CONV_DN
+REM ============================================
+   JS#CNV_ON
+   fCONV=1
+EN
+
+#CVUP_ON
+REM ============================================
+REM   Bi-Directional Conveyor Run Right to Left
+REM ============================================
+REM   JS#CONV_UP
+REM ============================================
+   JS#CNV_ON
+   fCONV=1
+EN
+
+#CV_OF
+   JS#CNV_OF
+   fCONV=0
+EN
+
+#MA_STP
+   JS#ST1OF,vSTOP=1
+   JS#ST1ON,vSTOP=2
+   JS#ST2OF,vSTOP=3
+   JS#ST2ON,vSTOP=4
+   vSTOP=0
+EN
+
+#SM_UPON;SB oUPRDY;fUPRDY=1;EN
+#SM_UPOF;CB oUPRDY;fUPRDY=0;EN
+#SM_DNON;SB oDNBA;fDNBA=1;EN
+#SM_DNOF;CB oDNBA;fDNBA=0;EN
+
+#PENDANT
+   JP#PENDANT,((@IN[iTEACH]+@IN[iPURGE]+@IN[iAXIS])=3)
+   HX1;XQ#P_PRESS,1
+   JS#TKEYREL
+   JP#PENDANT
+
+REM ===============================================
+REM  One-Shot Routine (Thread 1)
+REM ===============================================
+#OS_MN
+   cCRC=""
+   LT_STAT=0100
+   VLV=(@FRAC[vRUN/2]>0)
+
+REM==============================
+REM   One Shot Low Level Check
+REM==============================
+REM Low Level Module   JS#GET_LOW
+REM==============================
+
+   HX2;STXYZ;AMXYZ
+   IF(AXES=4);STW;AMW;ENDIF
+   JS#LED_RS
+   TEACH=0;WT(200*ms)
+   JS#MV_SBY
+   vPAGE=1
+   CTM=0
+   IF(PMGR_EN)
+      JS#CUR_DL
+   ELSE
+      CPROG=(CPROG1*(vRUN<3))+(CPROG2*(vRUN>2))
+      JS#LPPROG
+   ENDIF
+
+#MA_RET
+   JS#WT_RSP("ACK")
+
+   CSS;CST
+
+   IF (FID_EN=1)
+      JS#W_VBAI
+   ENDIF
+
+   JS#SK_CLR
+   LT_STAT=0010
+   tCTM=TIME
+
+   RUNNING=1
+   JS#PROG
+   IT*=1
+   RUNNING=0
+
+   JS#SK_CLR
+   LT_STAT=0100
+   CCNT=CCNT+1
+
+REM==============================
+REM  Flow Monitor Check
+REM==============================
+REM Flow Monitor Module   JS#GET_FLO
+REM==============================
+
+   CTM=(TIME-tCTM)/1024
+   JS#MV_SBY
+   JS#U025
+   JP#MA_MN
+
+REM ===============================================
+REM  Manual Purge (Thread 1)
+REM ===============================================
+#PR_MN
+   VLV=1
+   HX3
+   JP#PM_PRG,vFUNC=4
+   JS#VON_SEL
+   JS#TKEYREL
+   JS#PRGREL
+   JS#VOF_SEL
+   HX3;XQ#PENDANT,3
+EN
+
+#PM_PRG
+   JS#VON_SEL
+   WT vPARAM
+   JS#VOF_SEL
+EN
+
+#VON_SEL
+   DV_ID=CHEAD
+   JS#TLON(1,CHEAD,TYPE[CHEAD])
+EN
+
+#VOF_SEL
+   JS#TLOF(1,CHEAD,TYPE[CHEAD])
+EN
+
+#PRGREL;CHEAD=DV_ID;JP#PRGREL,vPURGE=1;EN
+
+REM ===============================================
+REM  Select Axis Routines (Thread 1)
+REM ===============================================
+#AX_XY;CAXIS=1;JS#LED_XY;SX=TBS_X;SY=TBS_Y;SZ=0;SW=0;JP#AX_DN
+#AX_X;CAXIS=2;JS#LED_X;SY=0;SX=TBS_X;SZ=0;SW=0;JP#AX_DN
+#AX_Y;CAXIS=3;JS#LED_Y;SX=0;SY=TBS_Y;SZ=0;SW=0;JP#AX_DN
+#AX_Z;CAXIS=4;JS#LED_Z;SX=0;SY=0;SZ=TBS_Z;SW=0;JP#AX_DN
+#AX_W;CAXIS=5;JS#LED_W;SX=0;SY=0;SZ=0;SW=TBS_W;JP#AX_DN
+#AX_DN;JS#TKEYREL;EN
+
+REM =======================================================================
+REM =======================Insert Auto Cycle Below=========================
+REM =======================================================================
+#AC_MN
+REM Auto Cycle Module Insert
+
+EN
+
+REM ------------------------------
+REM  Auto Cycle & Module Initialize
+REM ------------------------------
+#AC_INI
+
+REM============================
+REM JDX Not Up to Temp Alarm
+REM============================
+REM   JP#JDX_HWT,(@IN[iHALRM2]=1)
+REM============================
+
+REM ===============================================
+REM  'Low Level Initial Check
+REM Low Level Module   JS#GET_LOW
+REM ===============================================
+
+REM ===============================================
+REM   P-Select Initialize Connection (Auto Cycle)
+REM ===============================================
+   IF(PMGR_EN=1)
+REM      JS#SCN_CLR
+      JS#PMG_CLR
+   ELSE
+      vPRD_SEL=1
+      JS#IPROG
+   ENDIF
+REM ==============================================
+
+REM ==============================================
+REM            VPX Motor On (Primed)
+REM ==============================================
+REM   JS#VPX_ON
+REM ==============================================
+
+REM ==============================================
+REM            Gear Pumps On (Primed)
+REM ==============================================
+REM   JS#PMP_PR
+REM ==============================================
+
+   JS#A_PURGE,((SO_EN=1)|(AP_EN=1))
+
+REM ===============================================
+REM   Module Initial AC Check Block
+REM ===============================================
+REM  'Needle Calibration Initial Check
+REM Needle Cal Module   JS#GET_NDL
+REM ===============================================
+REM  'Shot Weight Initial Check
+REM   JS#GET_SCL
+REM ===============================================
+REM  'Spray Width Initial Check
+REM   JS#GET_WID
+REM ===============================================
+REM  'Aux Code Initial Check
+REM   JS#GET_AUX,((CWID_EN=1)|(VWID_EN=1))
+REM ===============================================
+REM  'Get Info From Part Manager
+   JS#GET_PRP
+REM ===============================================
+REM  'Conveyor Width Initial Check
+REM cWidth Adjust Module   JS#GET_CWA,((CURCWDTH<>SETCWDTH)&(CWID_EN=1))
+REM ===============================================
+REM  'Valve Width Initial Check
+REM Width Adjust Module   JS#GET_VWA,((CURVWDTH<>SETVWDTH)&(VWID_EN=1))
+REM ===============================================
+REM  'Dial Indicator Initial Check
+REM   JS#GET_IND
+REM ===============================================
+REM  'Jetter Clean Initial Check
+REM   JS#JDX_CLN,ACLN_EN
+REM ===============================================
+
+REM ===============================================
+REM   Modules That Run On Seperate Threads
+REM ===============================================
+REM  'Conveyor Width Adjust
+REM cWidth Adjust Module   IF(CWID_EN=1)
+REM cWidth Adjust Module      HX3
+REM cWidth Adjust Module      XQ#CWA_AC,3
+REM cWidth Adjust Module   ENDIF
+REM ===============================================
+REM  'Valve Width Adjust
+REM Width Adjust Module   IF(VWID_EN=1)
+REM Width Adjust Module      HX4
+REM Width Adjust Module      XQ#VWA_AC,4
+REM Width Adjust Module   ENDIF
+REM ===============================================
+
+REM ==============================================
+REM                  Ionizer On
+REM ==============================================
+REM   JS#ION_ON,ION_EN
+REM ==============================================
+
+   AC_INIT=1
+EN
+
+REM --------------------------------
+REM   Module Cyclical AC Check Block
+REM --------------------------------
+#MOD_CHK
+REM ===============================================
+REM   'Needle Calibration Cyclical Check
+REM Needle Cal Module   JS#GET_NDL,NDL_CNT=NDL_FRQ
+REM ===============================================
+REM   'Shot Weight Cyclical Check
+REM   JS#GET_SCL,SCL_CNT=SCL_FRQ
+REM ===============================================
+REM   'Spray Width Cyclical Check
+REM   JS#GET_WID,WID_CNT=WID_FRQ
+REM ===============================================
+REM   'Indicator Cyclical Check
+REM   JS#GET_IND,IND_CNT=IND_FRQ
+REM ===============================================
+REM   'JDX Clean Cyclical Check
+REM   JS#JDX_CLN,CLN_CNT=ACLN_FRQ
+REM ===============================================
+EN
+
+REM -------------------------------
+REM   Module Looping AC Check Block
+REM -------------------------------
+#MOD_LP
+REM ===============================================
+REM  'Low Level Check
+REM Low Level Module   JS#GET_LOW
+REM ===============================================
+REM   'JDX Heater Check
+REM   JP#JDX_HWT,(@IN[iHALRM2]=1)
+REM ===============================================
+REM  'Aux Code Check
+REM   JS#GET_AUX,((CPROG<>CPROG1)&((CWID_EN=1)|(VWID_EN=1)))
+REM ===============================================
+REM  'Get Info From Part Manager
+   JS#GET_PRP,(CPROG<>CPROG1)
+REM ===============================================
+
+EN
+
+REM -----------------------------------------------
+REM   Download Program & Wait for Modules to Finish
+REM -----------------------------------------------
+#AC_DWLD
+REM =====================================
+REM   Wait for Conveyor Adjust to Finish
+REM =====================================
+REM cWidth Adjust Module   JS#CWA_WT,(CWID_EN=1)
+REM =====================================
+REM   Wait for Valve Adjust to Finish
+REM =====================================
+REM vWidth Adjust Module   JS#VWA_WT,(VWID_EN=1)
+REM =====================================
+
+
+REM =====================================
+REM   P-Select Program Download Request
+REM =====================================
+   IF(PMGR_EN=1)
+      JS#PMG_DL
+   ELSE
+      CPROG=CPROG1
+      JS#LPPROG
+   ENDIF
+REM =====================================
+EN
+
+REM ---------------------------------
+REM   Module Cyclical Check Increment
+REM ---------------------------------
+#INC_CNT
+REM ===============================================
+REM  'Increment Needle Cal Counter
+REM   NDL_CNT=NDL_CNT+1
+REM ===============================================
+REM  'Increment Weight Check Counter
+REM   SCL_CNT=SCL_CNT+1
+REM ===============================================
+REM  'Increment Width Check Counter
+REM   WID_CNT=WID_CNT+1
+REM ===============================================
+REM  'Increment Dial Indicator Check Counter
+REM   IND_CNT=IND_CNT+1
+REM ===============================================
+REM  'Increment JDX Auto Clean Counter
+REM   CLN_CNT=CLN_CNT+1
+REM ===============================================
+EN
+
+
+REM ===============================================
+REM  Setup Routines (Thread 1)
+REM ===============================================
+#SU_MN
+   vPAGE=2
+   JS#BT_REL
+   JS#U040
+   VLV=VSTORE
+
+#SU_LP
+
+REM ================================
+REM   Part Manager Dropdown Disable
+REM ================================
+   IF(PMGR_EN)
+     vPRD_SEL=6
+   ELSE
+     vPRD_SEL=1
+   ENDIF
+REM ==============================
+REM   Part Manager Train Barcode
+REM ==============================
+REM   JS#TRN_PRT,(cPMG[0]="TRN")
+
+REM ================================
+REM      Pump Off / Recirc On
+REM ================================
+REM   JS#PMP_ST
+REM ================================
+
+REM ================================
+REM          Heater On/Off
+REM ================================
+REM   JS#HTR_ON,HTR_EN=1
+REM   JS#HTR_OF,HTR_EN=0
+REM ================================
+
+REM ================================
+REM   Material 1 Air Pressure On/Off
+REM ================================
+REM Material Pressure   JS#PRS1_ON,PRS1_MD=2
+REM Material Pressure   JS#PRS1_OF,PRS1_MD<>2
+REM ================================
+
+REM ================================
+REM   Material 2 Air Pressure On/Off
+REM ================================
+REM Material PressureREM MAT 1  JS#PRS2_ON,PRS2_MD=2
+REM Material PressureREM MAT 2  JS#PRS2_OF,PRS2_MD<>2
+REM ================================
+
+REM ================================
+REM   Laser Offset On/Off
+REM ================================
+REM   JS#LAS_SU,LAS_EN=0
+REM ================================
+
+REM ================================
+REM   Dial Indicator Offset On/Off
+REM ================================
+REM   JS#IND_SU
+REM ================================
+
+   JP#SU_END,vCSTOP=1
+   JS#CA_REF,vCA_BUT=1
+   JS#CA_HOME,vCA_BUT=2
+
+   JS#RS_SOL,((RETEACH[1]=0)&(RETEACH[2]=1))
+   JS#RS_APG,((RETEACH[1]=1)&(RETEACH[2]=1))
+   JS#RS_SBY,((RETEACH[1]=2)&(RETEACH[2]=1))
+   JS#RS_ALL,((RETEACH[1]=3)&(RETEACH[2]=1))
+
+REM ===============================================
+REM   Module Setup Control Block
+REM ===============================================
+REM  'Manual Needle Calibration
+REM Needle Cal Module   JS#NDL_CAL,vNDL_CAL=1
+REM ===============================================
+
+   JS#VS_L1ON,VSL_EN
+   JS#VS_L1OF,(VSL_EN=0)
+
+REM ===============================
+REM   White Light State -> ON
+REM ===============================
+   IF((WHL_EN)*(WHL_EN<>LAST[2]))
+      JS#VS_L2ON,(WHL_EN)
+   ENDIF
+
+REM ===============================
+REM   Black Light State -> ON
+REM ===============================
+REM Black Light   IF((BLK_EN)*(BLK_EN<>LAST[3]))
+REM Black Light      JS#VS_L3ON,(BLK_EN)
+REM Black Light   ENDIF
+
+REM ===============================
+REM   White Light State -> OFF
+REM ===============================
+   IF((WHL_EN=0)*(WHL_EN<>LAST[2]))
+      JS#VS_L2OF
+      vLGHT[2]=0
+   ENDIF
+
+REM ===============================
+REM   Black Light State -> OFF
+REM ===============================
+REM   IF((BLK_EN=0)*(BLK_EN<>LAST[3]))
+REM      JS#VS_L3OF
+REM      vLGHT[3]=0
+REM   ENDIF
+
+REM ===============================
+REM   Store Current Light State
+REM ===============================
+   LAST[2]=WHL_EN
+REM Black Light   LAST[3]=BLK_EN
+
+   JP#SU_LP
+
+#SU_END
+   JS#DR_CLOS
+   VLV=VSTORE
+
+   IF(((ST_BY=0)&(SO_EN=0))|(CAL<>0))
+      JS#SAFEZ
+      JS#ALLUP
+   ENDIF
+
+   JS#S1013,CAL<>0
+   JS#DR_CLOS
+   JS#ST1OF
+   JS#U100
+   JP#CS_MN1
+
+REM ===============================================
+REM  Calibration Routine (Thread 1)
+REM  Moves to Standby to allow operator to place Calibration Plate and Calibration Spike
+REM ===============================================
+#CA_REF
+   JS#BT_REL
+   JS#DR_CLOS
+   vPAGE=2
+   JS#ALLUP
+   JS#TUNE
+   JS#SAFEZ
+   JS#MV_SBY,ST_BY=0
+
+REM ========================================
+REM  Calibration Configuration
+REM  CAL=0 No Calibration Equipment Installed
+REM  CAL=1 Calibration Tip(s) Installed
+REM  CAL=2 Calibration Spike/Plate Installed
+REM ========================================
+
+   JS#ST1ON,lstREF<3
+   JS#ST1OF,lstREF>2
+   JS#S1010,((CAL=0)&(lstREF<3))
+   JS#S1011,((CAL=0)&(lstREF=3))
+   JS#S1012,((CAL=1)&(lstREF<3))
+   JS#S1014,((CAL=2)&(lstREF>2))
+
+   JS#DR_CLOS
+
+   JS#CA_REF1,lstREF=1
+   JS#CA_REF2,lstREF=2
+   JS#CA_REF3,lstREF=3
+   JS#CA_REF4,lstREF=4
+   JS#CA_REF5,lstREF=5
+   JS#U010
+
+   BGXY;AMXY
+
+   IF (AXES=4)
+      SPW=5000
+      BGW;AMW
+   ENDIF
+
+   BGZ;AMZ
+   JS#S1015
+   vPAGE=2
+   DRFLAG=0
+EN
+
+#CA_HOME
+   JS#BT_REL
+   JS#DR_CLOS
+   JS#ALLUP
+   JS#SAFEZ
+   JS#MV_HOME
+   JS#MV_SBY
+   vPAGE=2
+EN
+
+#CA_REF1;PA PT_CAL1[0],PT_CAL1[1],PT_CAL1[2];IF(AXES=4);PAW=PT_CAL1[3];ENDIF;EN
+#CA_REF2;PA PT_CAL2[0],PT_CAL2[1],PT_CAL2[2];IF(AXES=4);PAW=PT_CAL2[3];ENDIF;EN
+#CA_REF3;PA PT_CAL3[0],PT_CAL3[1],PT_CAL3[2];IF(AXES=4);PAW=PT_CAL3[3];ENDIF;EN
+#CA_REF4;PA PT_CAL4[0],PT_CAL4[1],PT_CAL4[2];IF(AXES=4);PAW=PT_CAL4[3];ENDIF;EN
+#CA_REF5;PA PT_CAL5[0],PT_CAL5[1],PT_CAL5[2];IF(AXES=4);PAW=PT_CAL5[3];ENDIF;EN
+#CA_REF6;PA PT_CAL6[0],PT_CAL6[1],PT_CAL6[2];IF(AXES=4);PAW=PT_CAL6[3];ENDIF;EN
+REM ===============================
+REM   Reteach Solvent Position
+REM ===============================
+#RS_SOL
+   RETEACH[2]=0
+   StpSUpdt=1
+
+   JS#SAFEZ
+   JS#ALLDW
+
+   TB_SPD=1
+   tAXES=AXES
+
+   HX2;STXYZ;AMXYZ
+   IF(AXES=4);STW;AMW;ENDIF
+   XQ#TB_XY,2
+
+   JS#S2700
+
+   RETEACH[0]=1
+   JS#TCH_POS
+
+   HX2;STXYZ;AMXYZ
+   IF(AXES=4);STW;AMW;ENDIF
+   JS#LED_RS
+
+   JS#S2703
+   RS_SOL=0
+   WT(1000*ms)
+   RETEACH[2]=0
+   StpSUpdt=1
+   SHXYZ
+   IF(AXES=4);SHW;ENDIF
+   JS#TUNE
+   JS#SAFEZ
+   JS#ALLUP
+   JS#MV_SBY
+   vPAGE=2
+EN
+
+REM ===============================
+REM   Reteach Purge Position
+REM ===============================
+#RS_APG
+   RETEACH[2]=0
+   StpSUpdt=1
+
+   JS#SAFEZ
+   JS#ALLDW
+
+   TB_SPD=1
+   tAXES=AXES
+
+   HX2;STXYZ;AMXYZ
+   IF(AXES=4);STW;AMW;ENDIF
+   XQ#TB_XY,2
+
+   JS#S2701
+
+   RETEACH[0]=2
+   JS#TCH_POS
+
+   HX2;STXYZ;AMXYZ
+   IF(AXES=4);STW;AMW;ENDIF
+   JS#LED_RS
+
+   JS#S2703
+   RS_APG=0
+   WT(1000*ms)
+   RETEACH[2]=0
+   StpSUpdt=1
+   vPAGE=2
+   SHXYZ
+   IF(AXES=4);SHW;ENDIF
+   JS#TUNE
+   JS#SAFEZ
+   JS#ALLUP
+   JS#MV_SBY
+   vPAGE=2
+EN
+
+REM ===============================
+REM   Reteach Standby Position
+REM ===============================
+#RS_SBY
+   RETEACH[2]=0
+   StpSUpdt=1
+
+   JS#SAFEZ
+   JS#ALLUP
+
+   TB_SPD=1
+   tAXES=AXES
+
+   HX2;STXYZ;AMXYZ
+   IF(AXES=4);STW;AMW;ENDIF
+   XQ#TB_XY,2
+
+   JS#S2702
+
+   RETEACH[0]=3
+   JS#TCH_POS
+
+   HX2;STXYZ;AMXYZ
+   IF(AXES=4);STW;AMW;ENDIF
+   JS#LED_RS
+
+   JS#S2703
+   RS_SBY=0
+   WT(1000*ms)
+   RETEACH[2]=0
+   StpSUpdt=1
+   SHXYZ
+   IF(AXES=4);SHW;ENDIF
+   JS#TUNE
+   JS#SAFEZ
+   JS#ALLUP
+   JS#MV_SBY
+   vPAGE=2
+EN
+
+REM ===============================
+REM   Reteach All Positions
+REM ===============================
+#RS_ALL
+   RETEACH[2]=0
+   StpSUpdt=1
+
+   JS#SAFEZ
+   JS#ALLDW
+
+   TB_SPD=1
+   tAXES=AXES
+
+   HX2;STXYZ;AMXYZ
+   IF(AXES=4);STW;AMW;ENDIF
+   XQ#TB_XY,2
+
+   JS#S2700
+
+   RETEACH[0]=1
+   JS#TCH_POS
+
+   JS#S2701
+
+   RETEACH[0]=2
+   JS#TCH_POS
+
+   HX2;STXYZ;AMXYZ
+   IF(AXES=4);STW;AMW;ENDIF
+   JS#LED_RS
+   WT(200*ms)
+   SHXYZ
+   IF(AXES=4);SHW;ENDIF
+   JS#TUNE
+   JS#SAFEZ
+   JS#ALLUP
+   TB_SPD=1
+   tAXES=AXES
+   HX2;STXYZ;AMXYZ
+   IF(AXES=4);STW;AMW;ENDIF
+   XQ#TB_XY,2
+
+   JS#S2702
+
+   RETEACH[0]=3
+   JS#TCH_POS
+
+   HX2;STXYZ;AMXYZ
+   IF(AXES=4);STW;AMW;ENDIF
+   JS#LED_RS
+
+   JS#S2703
+   RS_SOL=0;RS_APG=0;RS_SBY=0
+   WT(1000*ms)
+   RETEACH[2]=0
+   StpSUpdt=1
+   SHXYZ
+   IF(AXES=4);SHW;ENDIF
+   JS#TUNE
+   JS#SAFEZ
+   JS#ALLUP
+   JS#MV_SBY
+   vPAGE=2
+EN
+
+#TCH_POS
+   TBTIME=TIME
+   JS#RM_AX,@IN[iAXIS]=0
+   JP#TCH_POS,@IN[iTEACH]=1
+   JS#TE_ALRT
+
+   IF(RETEACH[0]=1)
+      PT_SOL[0]=_TPX;PT_SOL[1]=_TPY;PT_SOL[2]=_TPZ
+      IF(AXES=4);PT_SOL[3]=_TPW;ENDIF
+   ENDIF
+   IF(RETEACH[0]=2)
+      PT_APG[0]=_TPX;PT_APG[1]=_TPY;PT_APG[2]=_TPZ
+      IF(AXES=4);PT_APG[3]=_TPW;ENDIF
+   ENDIF
+   IF(RETEACH[0]=3)
+      PT_SBY[0]=_TPX;PT_SBY[1]=_TPY;PT_SBY[2]=0
+      IF(AXES=4);PT_SBY[3]=_TPW;ENDIF
+   ENDIF
+
+#TCH_RS
+   JP#TCH_RS,@IN[iTEACH]=0
+EN
+
+REM ===============================================
+REM  Auto Purge (Thread 2)
+REM ===============================================
+#A_PURGE
+   AP_OUT=0;PING=1;VLV=1
+   WT(200*ms)
+   JS#C2002
+   SP 100000,100000,100000/SCALE_Z
+   AC 200000,200000,200000/SCALE_Z
+   DC 200000,200000,200000/SCALE_Z
+
+   JS#DR_CLOS
+   JS#SAFEZ
+   WT(200*ms)
+   PA PT_APG[0],PT_APG[1],PT_APG[2]
+   BGXY;AMXY
+
+   IF (AXES=4)
+      SPW=100000
+      ACW=200000
+      DCW=200000
+      PAW=PT_APG[3]
+      BGW;AMW
+   ENDIF
+
+   BGZ;AMZ
+
+   JS#ALLDW
+   JS#ALLON
+   WT AP_LEN
+   JS#ALLOFF
+   JS#ALLUP
+
+   WT(200*ms)
+   JS#MV_SBY
+   AP_TE=0;AP_TP=TIME;VLV=VSTORE
+   PING=0;AP_OUT=1
+EN
+
+REM ===============================================
+REM  Trackball (Thread 2)
+REM ===============================================
+#TB_XY
+   IF (tAXES=4);STXYZW;AMXYZW;ELSE;STXYZ;AMXYZ;ENDIF
+
+   DC 125000,125000,960000/SCALE_Z
+   AC 125000,125000,425000/SCALE_Z
+   IF(AXES=4)
+      DCW=250000
+      ACW=125000
+   ENDIF
+
+   JS#LED_XY
+
+   IF (TB_SPD=1)
+      TBS_X=(((_FLX-_BLX)/_SFX)/4)
+      TBS_Y=(((_FLY-_BLY)/_SFY)/4)
+      TBS_Z=(((_FLZ-_BLZ)/_SFZ)/4)
+      TBS_W=(((_FLW-_BLW)/_SFW)/4)
+      SX=TBS_X
+      SY=TBS_Y
+      SZ=0
+      SW=0
+   ELSE
+      TBS_X=(((_FLX-_BLX)/_SFX)/100)
+      TBS_Y=(((_FLY-_BLY)/_SFY)/100)
+      TBS_Z=(((_FLZ-_BLZ)/_SFZ)/100)
+      TBS_W=(((_FLW-_BLW)/_SFW)/100)
+      SX=TBS_X
+      SY=TBS_Y
+      SZ=0
+      SW=0
+   ENDIF
+
+   DEX=0;DEY=0
+   MX=0;MY=0;MZ=0;MW=0;MXL=0;MYL=0;MZL=0
+   MWL=0;MT=TIME;DE MXL,MYL,MZL,MWL;MTL=MT
+
+   SHXY
+   IF(AXES=4);SHW;ENDIF
+
+   IF(_MOZ);SHZ;ENDIF
+
+   IF (tAXES=4)
+      JG 0,0,0,0
+      BGXYZW
+   ELSE
+      JG 0,0,0
+      BGXYZ
+   ENDIF
+
+#TB_XY1
+   MTL=MT;MT=TIME;MDT=(MT-MTL+1)
+   MXL=MX;MYL=MY;MZL=MZ;MWL=MW
+   MZ=_DEX;MX=_DEX;MY=_DEY;MW=_DEY
+
+   VELX=SX*(MX-MXL)/MDT
+   VELY=SY*(MY-MYL)/MDT
+   VELZ=SZ*(MZL-MZ)/MDT
+   VELW=SW*(MW-MWL)/MDT
+
+   JS#QK_SAND
+
+#TB_XY2
+
+   IF (tAXES=4)
+      JG VELX,VELY,VELZ,VELW
+   ELSE
+      JG VELX,VELY,VELZ
+   ENDIF
+
+   JP#TB_XY1
+
+#QK_SAND
+
+   IF(VELX<>0);JS#Q_X,((_TPX+VELX>_FLX)|(_TPX+VELX<_BLX));ENDIF
+   IF(VELY<>0);JS#Q_Y,((_TPY+VELY>_FLY)|(_TPY+VELY<_BLY));ENDIF
+   IF(VELZ<>0);JS#Q_Z,((_TPZ+VELZ>_FLZ)|(_TPZ+VELZ<_BLZ));ENDIF
+   IF(VELW<>0);JS#Q_W,((_TPW+VELW>_FLW)|(_TPW+VELW<_BLW));ENDIF
+
+EN
+
+#Q_X
+   IF(VELX>0)
+      VELX=VELX-((_TPX+VELX)-_FLX)
+   ELSE
+      VELX=VELX-((_TPX+VELX)-_BLX)
+   ENDIF
+EN
+
+#Q_Y
+   IF(VELY>0)
+      VELY=VELY-((_TPY+VELY)-_FLY)
+   ELSE
+      VELY=VELY-((_TPY+VELY)-_BLY)
+   ENDIF
+EN
+
+#Q_Z
+   IF(VELZ>0)
+      VELZ=VELZ-((_TPZ+VELZ)-_FLZ)
+   ELSE
+      VELZ=VELZ-((_TPZ+VELZ)-_BLZ)
+   ENDIF
+EN
+
+#Q_W
+   IF(VELW>0)
+      VELW=VELW-((_TPW+VELW)-_FLW)
+   ELSE
+      VELW=VELW-((_TPW+VELW)-_BLW)
+   ENDIF
+EN
+
+
+REM ===============================================
+REM  Teach Pendant Routines (Thread 1)
+REM ===============================================
+#RM_TCH
+   TBTIME=TIME
+   JS#RM_AX,@IN[iAXIS]=0
+   JS#PR_MN,@IN[iPURGE]=0
+   JS#TE_F2,@IN[iTEACH]=0
+   TETIME=TIME
+EN
+
+#RM_AX
+   JP#TB_SP,(TIME-TBTIME)>750
+   JP#RM_AX,@IN[iAXIS]=0
+   CAXIS=CAXIS+1
+#RM_AXRS
+   JS#RM_AR,(CAXIS)>(tAXES+1)
+   JS#RM_AR,((CAXIS>4)&(tAXES<4))
+   JS#RM_AR,((CAXIS>3)&(vPAGE=3))
+   JS#AX_XY,CAXIS=1
+   JS#AX_X,CAXIS=2
+   JS#AX_Y,CAXIS=3
+   JS#AX_Z,CAXIS=4
+   JS#AX_W,CAXIS=5
+EN
+#RM_AR;CAXIS=1;EN
+#LED_XY;CB oTB_WLED;CB oTB_ZLED;SB oTB_XLED;SB oTB_YLED;EN
+#LED_X;CB oTB_WLED;CB oTB_ZLED;CB oTB_YLED;SB oTB_XLED;EN
+#LED_Y;CB oTB_WLED;CB oTB_ZLED;CB oTB_XLED;SB oTB_YLED;EN
+#LED_Z;CB oTB_WLED;CB oTB_YLED;CB oTB_XLED;SB oTB_ZLED;EN
+#LED_W;CB oTB_ZLED;CB oTB_YLED;CB oTB_XLED;SB oTB_WLED;EN
+#LED_RS;CB oTB_WLED;CB oTB_ZLED;CB oTB_YLED;CB oTB_XLED;CB oTB_RLED;EN
+
+#TB_SP
+   IF (TB_SPD=1)
+      TBS_X=(((_FLX-_BLX)/_SFX)/100)
+      TBS_Y=(((_FLY-_BLY)/_SFY)/100)
+      TBS_Z=(((_FLZ-_BLZ)/_SFZ)/100)
+      TBS_W=(((_FLW-_BLW)/_SFW)/100)
+      TB_SPD=2
+      SB oTB_RLED
+   ELSE
+      TBS_X=(((_FLX-_BLX)/_SFX)/4)
+      TBS_Y=(((_FLY-_BLY)/_SFY)/4)
+      TBS_Z=(((_FLZ-_BLZ)/_SFZ)/4)
+      TBS_W=(((_FLW-_BLW)/_SFW)/4)
+      TB_SPD=1
+      CB oTB_RLED
+   ENDIF
+
+   SB oALM;WT(70*ms);CB oALM
+   JP#RM_AXRS
+
+
+REM =======================================================================
+REM =========================Insert Modules Below==========================
+REM =======================================================================
+REM =========Ensure Revision of Main Supports Modules To Be Added==========
+REM =======================================================================
+REM =======To Ensure Full Functionality, Refer to Module User Guide========
+REM =======================================================================
+#MODULES
+REM Board Locator Module Insert
+REM Low Level Module Insert
+REM Flow Monitor Module Insert
+REM Material Pressure Module Insert
+REM Needle Calibration Module Insert
+REM Width Adjust Module Insert
+
+REM=============================Part Manager Module==============================
+REM             Author: Prog Dept   Date: 03/17/2016   Version: Beta
+REM               ===============================================
+REM                              Revision History
+REM               ===============================================
+REM      Rev: Change:                                     Date:        By:
+REM      ------------------------------------------------------------------
+REM      01 - Modified From Base Module                 ##/##/##       XXX
+REM      ------------------------------------------------------------------
+REM
+REM==============================Initialize I/O==================================
+#PMG_IO
+EN
+
+REM============================Initialize Variables==============================
+#PMG_INI
+   LIB_REF="_ER@"
+   PMG_TO=5000;     'Part Manager Library Comm Timeout Limit
+   PMG_LER=0;       'Part Manager Library Error Flag
+   PMG_TER=0;       'Part Manager Library Timeout Flag
+   DM cPMG[10];     'Library Communication Resource
+   DM PMG_RSP[10];  'Library Response Storage
+
+   PMG_PRP=0;       'Determine what property to retrieve in #CUR_PRP
+REM ---------------------
+REM       PMG_PRP=X
+REM     X=0 : Property 1
+REM     X=1 : Property 2
+REM     X=2 : Property 3
+REM     X=3 : Property 4
+REM     X=4 : Property 5
+REM ---------------------
+EN
+
+REM===============================Check Variables================================
+#PMG_CHK
+   INIT=5
+   JP#PMG_RST,PMGR_EN<0
+   JP#PMG_RST,DL_TYPE<0
+   JP#PMG_RST,SCN_EN<0
+EN
+
+REM===============================Reset Variables================================
+#PMG_RST
+   JS#M4000
+   PMGR_EN=1;        'Part Manager Enabled (vPRD_SEL=6)
+   DL_TYPE=1;        'Type of Download (0:Project  |  1:Program)
+   SCN_EN=0;         'Barcode scanner enabled
+   JP#AUTO2
+
+REM===============================Error Checking=================================
+#PMG_SCN
+   JP#ESTOP,PMG_LER<>0
+   JP#ESTOP,PMG_TER<>0
+EN
+
+REM===============================Error Handling=================================
+#PMG_ERR
+   MEC=1130;JP#M1130,PMG_LER<>0
+   MEC=1145;JP#M1145,PMG_TER<>0
+EN
+
+REM==============================Module Functions================================
+
+REM ============================================
+REM  Download Part by Partcode
+REM ============================================
+#PMG_DL
+   JP#CUR_DL,SCN_EN=0
+   JS#PMG_CLR
+   JS#MSG_BEG("PSL",5020)
+   MG{EH}{N},{S}BC[1],BC[2],BC[3],BC[4]
+   MG{EH}{N}",",{Z1.0}DL_TYPE
+   JS#MSG_END
+   RSP_TM=TIME
+   JS#WT_RSP("ACK")
+EN
+
+REM ============================================
+REM  Download Current Part
+REM ============================================
+#CUR_DL
+   JS#PMG_CLR
+   JS#MSG_BEG("PSL",5000)
+   MG{EH}{N},{Z1.0}DL_TYPE
+   JS#MSG_END
+   RSP_TM=TIME
+   JS#WT_RSP("ACK")
+EN
+
+REM ============================================
+REM  Lookup Current Part Property Index
+REM ============================================
+#CUR_IDX
+   JS#PMG_CLR
+   JS#MSG_BEG("PSL",3020)
+   JS#MSG_END
+   RSP_TM=TIME
+   JS#WT_RSP("VAL")
+   INDEX=PMG_RSP[0]
+EN
+
+REM ============================================
+REM  Lookup Current Part Property
+REM ============================================
+#CUR_PRP
+   JS#PMG_CLR
+   JS#MSG_BEG("PSL",3030)
+   IF(PRP_IDX=1)
+      MG{EH}{N},"Property 1,,",{Z2.0}INDEX
+   ENDIF
+   IF(PRP_IDX=2)
+      MG{EH}{N},"Property 2,,",{Z2.0}INDEX
+   ENDIF
+   IF(PRP_IDX=3)
+      MG{EH}{N},"Property 3,,",{Z2.0}INDEX
+   ENDIF
+   IF(PRP_IDX=4)
+      MG{EH}{N},"Property 4,,",{Z2.0}INDEX
+   ENDIF
+   IF(PRP_IDX=5)
+      MG{EH}{N},"Property 5,,",{Z2.0}INDEX
+   ENDIF
+   JS#MSG_END
+   RSP_TM=TIME
+   JS#WT_RSP("VAL")
+EN
+
+REM ============================================
+REM  Retrieve All Properties
+REM ============================================
+#GET_PRP
+   PRP_IDX=1            ;' Index for property loop
+   MAX_PROP=1           ;' Number of properties to retrieve
+   JS#CUR_IDX
+#PRP_LP
+   JS#CUR_PRP
+   PROP[PRP_IDX]=cPMG[0]
+   PRP_IDX=PRP_IDX+1
+   JP#PRP_LP,PRP_IDX<MAX_PROP
+
+REM ============================================
+REM Store Properties that were retrieved
+REM ============================================
+   SETCWDTH=PROP[1]
+   CPROG1=CPROG
+EN
+
+REM ============================================
+REM  Clear Galil Resource
+REM ============================================
+#PMG_CLR
+   IDX=0
+#PMG_CLP
+   cPMG[IDX]=-99
+   PMG_RSP[IDX]=-99
+   IDX=IDX+1
+   JP#PMG_CLP,IDX<(PMG_RSP[-1])
+EN
+
+REM ============================================
+REM  Begin Training Process (Barcode Scan)
+REM ============================================
+#TRN_BG
+   JS#SCN_CLR
+   CODE=3110
+   JS#MSG_BEG("SCN",CODE)
+   JS#MSG_END
+   TRN_TM=TIME
+#TRN_WT
+   JP#TRN_FL,((cSCN[1]-LIB_REF)>0)
+   JP#TRN_WT,((BC[1]="")&((TIME-TRN_TM)<SCN_TO))
+EN
+
+REM ============================================
+REM  End Training Process (Barcode Scan)
+REM ============================================
+#TRN_EN
+   CODE=3115
+   JS#MSG_BEG("SCN",CODE)
+   JS#MSG_END
+EN
+
+REM ============================================
+REM  Train Part by Barcode
+REM ============================================
+#TRN_PRT
+   JS#PMG_CLR
+   JP#TRN_FL,(SCN_EN=0)
+   JS#TRN_BG
+   JP#TRN_FL,(BC[1]="")
+   WT50
+   cPMG[1]=BC[1];cPMG[2]=BC[2];cPMG[3]=BC[3];cPMG[4]=BC[4]
+   cPMG[0]="ACK"
+EN
+
+REM ============================================
+REM  Part Training Failed
+REM ============================================
+#TRN_FL
+   JS#TRN_EN
+   cPMG[0]="NAK"
+   JP#SCN_LER,((cSCN[1]-LIB_REF)>0)
+EN
+
+REM ============================================
+REM  Post-Download Restart
+REM ============================================
+#RESTART
+   IF(ACFLAG)
+      XQ#AC_RET,1
+   ELSE
+      XQ#MA_RET,1
+   ENDIF
+
+   JP#SCAN
+
+REM ============================================
+REM  Wait for Valid Library Response
+REM ============================================
+#WT_RSP
+   JP#PMG_LER,((cPMG[0]-LIB_REF)>0)
+   JP#PMG_TER,((TIME-RSP_TM)>PMG_TO)
+   IF((^a)="ACK")
+      JP#WT_RSP,(cPMG[0]<>(^a))
+   ELSE
+      JP#WT_RSP,(cPMG[0]=-99)
+      JS#STR_RSP
+   ENDIF
+EN
+
+REM ============================================
+REM  Store Library Response
+REM ============================================
+#STR_RSP
+   IDX=0
+#STR_LP
+   PMG_RSP[IDX]=cPMG[IDX]
+   IDX=IDX+1
+   JP#STR_LP,((cPMG[IDX]<>-99)&(IDX<10))
+EN
+
+REM ============================================
+REM  Part Manager Library Error
+REM ============================================
+#PMG_LER
+   PMG_LER=(cPMG[0]-LIB_REF)
+EN
+
+REM ============================================
+REM  Part Manager Timeout Error
+REM ============================================
+#PMG_TER
+   PMG_TER=1
+EN
+
+REM==============================Module Messages=================================
+#M1130
+   vPAGE=4
+   vSYSMSG=(MEC+PMG_LER)
+   MERR=MEC
+   JS#W_VCONT
+   PMG_LER=0
+   JP#ESTOP1
+
+#M1145
+   vPAGE=4
+   vSYSMSG=MEC
+   MERR=MEC
+   JS#W_VCONT
+   PMG_TER=0
+   JP#ESTOP1
+
+REM===============================End of Module==================================
+EN
+REM ===============================================
+REM   Screens
+REM ===============================================
+REM =================================
+REM  System Messages
+REM =================================
+#S1000
+   vCONT=0
+   vSYSMSG=1000
+   WT(30*ms)
+   vPAGE=4
+EN
+
+#S1002
+   vCONT=0
+   vSYSMSG=1002
+   WT(30*ms)
+   vPAGE=4
+EN
+
+#S1003
+   vCONT=0
+   vSYSMSG=1003
+   WT(30*ms)
+   vPAGE=4
+EN
+
+#S1010
+   vSYSMSG=1010
+   WT(30*ms)
+   vPAGE=4
+
+   IF(AXES=4)
+      SHW
+      SPW=12000
+      PAW=PT_SPIKE;BGW;AMW
+   ENDIF
+
+   DRFLAG=0
+   JS#W_VCONT
+   JS#DR_CLOS
+   CAL=2
+   JS#BURN
+EN
+
+#S1011
+   vSYSMSG=1011
+   WT(30*ms)
+   vPAGE=4
+   DRFLAG=0
+   JS#W_VCONT
+   JS#DR_CLOS
+   CAL=1
+   JS#BURN
+EN
+
+
+#S1012
+   vSYSMSG=1012
+   WT(30*ms)
+   vPAGE=4
+
+   IF(AXES=4)
+      SHW
+      SPW=12000
+      PAW=PT_SPIKE;BGW;AMW
+   ENDIF
+
+   DRFLAG=0
+   JS#W_VCONT
+   JS#DR_CLOS
+   CAL=2
+   JS#BURN
+EN
+
+#S1013
+   vSYSMSG=1013
+   WT(30*ms)
+   vPAGE=4
+
+   IF((AXES=4)&(CAL=2)&(POS_VAL=1))
+      SHW
+      SPW=12000
+      PAW=PT_SPIKE;BGW;AMW
+   ENDIF
+
+   DRFLAG=0
+   JS#W_VCONT
+   JS#DR_CLOS
+   CAL=0
+   JS#BURN
+EN
+
+#S1014
+   vSYSMSG=1014
+   WT(30*ms)
+   vPAGE=4
+
+   IF((AXES=4)&(CAL=2))
+      SHW
+      SPW=12000
+      PAW=PT_SPIKE;BGW;AMW
+   ENDIF
+
+   DRFLAG=0
+   JS#W_VCONT
+   JS#DR_CLOS
+   CAL=1
+   JS#BURN
+EN
+
+#S1015
+   vSYSMSG=1015
+   WT(30*ms)
+   vPAGE=4
+   DRFLAG=0
+   JS#W_VCONT
+   JS#DR_CLOS
+EN
+
+#S1020
+   vSYSMSG=1020
+   WT(30*ms)
+   vPAGE=4
+
+   IF(LOG_EN)
+      JS#LOG_BEG("LOG")
+      MG {EH}{N},"Error",{^09},"Watch Dog"
+      JS#LOG_END
+   ENDIF
+
+EN
+
+#S1021
+   vSYSMSG=1021
+   WT(30*ms)
+   vPAGE=4
+   JS#SYS_BEG
+   MG{EH}{N},"Command Error"
+   MG{EH}{N}{F3.0}ERR," on line",{F4.0}LINE
+   JS#SYS_END
+   JS#LOG_BEG("LOG")
+   MG{EH}{N},"Command Error"
+   MG{EH}{N}{F3.0}ERR," on line",{F4.0}LINE
+   JS#LOG_END
+EN
+
+#S1022
+   vSYSMSG=1022
+   WT(30*ms)
+   vPAGE=4
+   JS#SYS_BEG
+   MG{EH}{N},"Position Error, "
+   MG{EH}{N}"Stop codes (x,y,z,w)",{F3.0}_SCX,",",{F3.0}_SCY,","
+   MG{EH}{N}{F3.0}_SCZ,",",{F3.0}_SCW
+   JS#SYS_END
+
+   JS#LOG_BEG("LOG")
+   MG{EH}{N},"X-AXIS "
+   MG{EH}{N}"ENC POS.",{F6.0}_TPX,", COM POS.",{F6.0}_RPX,", POS ERR."
+   MG{EH}{N}{F6.0}_TEX
+   JS#LOG_END
+
+   JS#LOG_BEG("LOG")
+   MG{EH}{N},"Y-AXIS "
+   MG{EH}{N}"ENC POS.",{F6.0}_TPY,", COM POS.",{F6.0}_RPY,", POS ERR."
+   MG{EH}{N}{F6.0}_TEY
+   JS#LOG_END
+
+   JS#LOG_BEG("LOG")
+   MG{EH}{N},"Z-AXIS "
+   MG{EH}{N}"ENC POS.",{F6.0}_TPZ,", COM POS.",{F6.0}_RPZ,", POS ERR."
+   MG{EH}{N}{F6.0}_TEZ
+   JS#LOG_END
+
+   IF(AXES=4)
+      JS#LOG_BEG("LOG")
+      MG{EH}{N},"W-AXIS "
+      MG{EH}{N}"ENC POS.",{F6.0}_TPW,", COM POS.",{F6.0}_RPW,", POS ERR."
+      MG{EH}{N}{F6.0}_TEW
+      JS#LOG_END
+   ENDIF
+EN
+
+#S1023
+   vSYSMSG=1023
+   WT(30*ms)
+   vPAGE=4
+   JS#SYS_BEG
+   MG{EH}{N},"Limit Error, "
+   MG{EH}{N}"Stop codes (x,y,z,w)",{F3.0}_SCX,",",{F3.0}_SCY,","
+   MG{EH}{N}{F3.0}_SCZ,",",{F3.0}_SCW
+   JS#SYS_END
+   JS#LOG_BEG("LOG")
+   MG{EH}{N},"Limit Error, "
+   MG{EH}{N}"Stop codes (x,y,z,w)",{F3.0}_SCX,",",{F3.0}_SCY,","
+   MG{EH}{N}{F3.0}_SCZ,",",{F3.0}_SCW
+   JS#LOG_END
+EN
+
+#S1024
+   vSYSMSG=1024
+   WT(30*ms)
+   vPAGE=4
+   MERR=MEC
+   JS#SYS_BEG
+   MG{EH}{N},"Unsolicited Communication Lost"
+   JS#SYS_END
+   JS#LOG_BEG("LOG")
+   MG{EH}{N},"Unsolicited Communication Lost"
+   JS#LOG_END
+   UNS_ERR=0
+   JS#W_VCONT
+   MERR=0
+#QT_WT
+   JP#QT_WT,vQUIT<>2
+   JP#SCAN
+EN
+
+#S1030
+   vSYSMSG=(MEC+(AIR_ERR-1))
+   WT(30*ms)
+   vPAGE=4
+   MERR=MEC
+   JS#W_VCONT
+   AIR_ERR=0
+   MERR=0
+   JP#ESTOP1
+
+
+#S1050
+   vSYSMSG=1050
+   WT(30*ms)
+   vPAGE=4
+
+   IF(LOG_EN)
+      JS#LOG_BEG("LOG")
+      MG {EH}{N},"Error",{^09},"Power Check Failed"
+      JS#LOG_END
+   ENDIF
+
+EN
+
+#S1051
+   vSYSMSG=1051
+   WT(30*ms)
+   vPAGE=4
+
+   IF(LOG_EN)
+      JS#LOG_BEG("LOG")
+      MG {EH}{N},"Error",{^09},"E-Stop Button Failed"
+      JS#LOG_END
+   ENDIF
+EN
+
+#S1052
+   vSYSMSG=1052
+   WT(30*ms)
+   vPAGE=4
+
+   IF(LOG_EN)
+      JS#LOG_BEG("LOG")
+      MG {EH}{N},"Error",{^09},"Door Safety Failed"
+      JS#LOG_END
+   ENDIF
+EN
+
+#S1053
+   vSYSMSG=1053
+   WT(30*ms)
+   vPAGE=4
+EN
+
+#S1200
+   vSYSMSG=PNEC
+   WT(30*ms)
+   vPAGE=4
+
+   IF(LOG_EN)
+      JS#LOG_BEG("LOG")
+      MG {EH}{N},"Error",{^09},"Pneumatic Error:",PNEC
+      JS#LOG_END
+   ENDIF
+
+EN
+
+#S1400
+   vSYSMSG=1400
+   WT(30*ms)
+   vPAGE=4
+   MERR=MEC
+
+   IF(LOG_EN)
+      JS#LOG_BEG("LOG")
+      MG {EH}{N},"Error",{^09},"Exhaust Flow Low"
+      JS#LOG_END
+   ENDIF
+
+   JS#W_VCONT
+   FAN_ERR=0
+   JP#ESTOP1
+
+#S1401
+   vSYSMSG=1401
+   WT(30*ms)
+   vPAGE=4
+   MERR=MEC
+
+   IF(LOG_EN)
+      JS#LOG_BEG("LOG")
+      MG {EH}{N},"Error",{^09},"B&R Connection Lost"
+      JS#LOG_END
+   ENDIF
+
+   JS#W_VCONT
+   WD_ERR=0
+   TRY=0
+   JS#IO_CON
+   JP#ESTOP1
+
+#S1402
+   vSYSMSG=1402
+   WT(30*ms)
+   vPAGE=4
+   IF(LOG_EN)
+      JS#LOG_BEG("LOG")
+      MG {EH}{N},"Warning",{^09},"Dry Mode"
+      JS#LOG_END
+   ENDIF
+   JS#W_VCONT
+EN
+
+#S1403
+   vSYSMSG=1403
+   WT(30*ms)
+   vPAGE=4
+   MERR=(MEC*RUNNING)
+   JS#SYS_BEG
+   MG {EH}{N},"Bypass Enabled in Auto Cycle"
+   JS#SYS_END
+   JS#W_VCONT
+   JP#NOOP,RUNNING=0
+   RUNNING=0
+   JP#ESTOP1
+
+#S1500
+       IF (VIS_ERR<1500)|(VIS_ERR>1508)
+          VIS_ERR=1510
+       ENDIF
+
+
+   vSYSMSG=VIS_ERR
+   WT(30*ms)
+   vPAGE=4
+
+   IF(LOG_EN)
+      JS#LOG_BEG("LOG")
+      MG {EH}{N},"Error",{^09},"Vision Error:",VIS_ERR
+      JS#LOG_END
+   ENDIF
+
+EN
+
+REM ------------------------------
+REM Build Message and Reset Points
+REM ------------------------------
+#S1700
+   POSITION[0]="";POSITION[1]=""
+   POSITION[2]="";POSITION[3]=""
+   POSITION[4]="";POSITION[5]=""
+   POSITION[6]=""
+   i=0
+
+   IF(RS_SOL)
+      POSITION[i]="Solven"
+      i=i+1
+      POSITION[i]="t"
+      i=i+1
+   ENDIF
+
+   IF(RS_APG)
+      IF(i>0)
+         POSITION[i]=", Auto"
+         i=i+1
+         POSITION[i]="-Purge"
+         i=i+1
+      ELSE
+         POSITION[i]="Auto-P"
+         i=i+1
+         POSITION[i]="urge"
+         i=i+1
+      ENDIF
+   ENDIF
+
+   IF(RS_SBY)
+      IF(i>0)
+         POSITION[i]=", Stan"
+         i=i+1
+         POSITION[i]="dby"
+         i=i+1
+      ELSE
+         POSITION[i]="Standb"
+         i=i+1
+         POSITION[i]="y"
+         i=i+1
+      ENDIF
+   ENDIF
+
+   POSITION[i]="."
+
+   vSYSMSG=1700
+   WT(30*ms)
+   vPAGE=4
+   JS#W_VCONT
+EN
+
+#S2000
+   vSYSMSG=2000
+   WT(30*ms)
+   vPAGE=4
+   JS#SYS_BEG
+   MG{EH}{N},"System Startup"
+   JS#SYS_END
+   JS#LOG_BEG("LOG")
+   MG{EH}{N},"System Startup"
+   JS#LOG_END
+EN
+
+#S2001
+   vSYSMSG=2001
+   WT(30*ms)
+   vPAGE=4
+EN
+
+#S2002
+   vSYSMSG=2002
+   WT(30*ms)
+   vPAGE=4
+   JS#SYS_BEG
+   MG{EH}{N},"Homing System..."
+   JS#SYS_END
+EN
+
+#S2003
+   vSYSMSG=2003
+   WT(30*ms)
+   vPAGE=4
+EN
+
+#S2010
+   vSYSMSG=2010
+   WT(30*ms)
+   vPAGE=4
+
+   IF(LOG_EN)
+      JS#LOG_BEG("LOG")
+      MG {EH}{N},"Error",{^09},"Unrecoverable Variable Error"
+      JS#LOG_END
+   ENDIF
+
+   HX
+EN
+
+#S2011
+   vSYSMSG=2011
+   WT(30*ms)
+   vPAGE=4
+EN
+
+#S2012
+   vSYSMSG=2012
+   WT(30*ms)
+   vPAGE=4
+   IF(LOG_EN)
+      JS#LOG_BEG("LOG")
+      MG {EH}{N},"<Error",{^09},"Subroutine Error"
+      JS#LOG_END
+   ENDIF
+EN
+
+
+#S2020
+   vSYSMSG=2020
+   WT(30*ms)
+   vPAGE=4
+EN
+
+#S2021
+   vSYSMSG=2021
+   WT(30*ms)
+   vPAGE=4
+EN
+
+#S2022
+   vSYSMSG=2022
+   WT(30*ms)
+   vPAGE=4
+#2022_WT
+   JP#AC_END,vCSTOP=1
+   JP#2022_WT,@IN[iBYPASS]=0
+EN
+
+#S2030
+   vSYSMSG=2030
+   WT(30*ms)
+   vPAGE=4
+   JS#SYS_BEG
+   MG{EH}{N},"Checking for exhaust input. Please wait."
+   JS#SYS_END
+EN
+
+#S2031
+   vSYSMSG=2031
+   WT(30*ms)
+   vPAGE=4
+   JS#SYS_BEG
+   MG{EH}{N},"Verifying exhaust. Please wait..."
+   JS#SYS_END
+EN
+
+#S2040
+   vSYSMSG=2040
+   WT(30*ms)
+   vPAGE=4
+EN
+
+#S2041
+   vSYSMSG=2041
+   WT(30*ms)
+   vPAGE=4
+EN
+
+#S2042
+   vSYSMSG=2042
+   WT(30*ms)
+   vPAGE=4
+EN
+
+#S2043
+   vSYSMSG=2043
+   WT(30*ms)
+   vPAGE=4
+EN
+
+#S2044
+   vSYSMSG=2044
+   WT(30*ms)
+   vPAGE=4
+EN
+
+#S2045
+   vSYSMSG=2045
+   WT(30*ms)
+   vPAGE=4
+EN
+
+#S2052
+   vSYSMSG=2052
+   WT(30*ms)
+   vPAGE=4
+EN
+
+#S2060
+   vSYSMSG=2060
+   WT(30*ms)
+   vPAGE=4
+EN
+
+#S2061
+   vSYSMSG=2061
+   WT(30*ms)
+   vPAGE=4
+EN
+
+#S2063
+   vSYSMSG=2063
+   WT(30*ms)
+   vPAGE=4
+EN
+
+#S2700
+   vSYSMSG=2700
+   WT10
+   vPAGE=4
+EN
+
+#S2701
+   vSYSMSG=2701
+   WT10
+   vPAGE=4
+EN
+
+#S2702
+   vSYSMSG=2702
+   WT10
+   vPAGE=4
+EN
+
+#S2703
+   vSYSMSG=2703
+   WT10
+   vPAGE=4
+   JS#BURN
+EN
+
+#S3000
+   vSYSMSG=3000
+   WT(30*ms)
+   vPAGE=4
+EN
+
+#S3001
+   vSYSMSG=3001
+   WT(30*ms)
+   vPAGE=4
+EN
+
+
+REM =================================
+REM  Module Messages
+REM =================================
+#M4000
+   vSYSMSG=4000+(INIT-1)
+   WT(30*ms)
+   vPAGE=4
+EN
+
+REM =================================
+REM  Cycle Stop Messages
+REM =================================
+#C2001
+   vPAGE=0
+   vSTOPMSG=2001
+   JS#SYS_BEG
+   MG{EH}{N},"Entering Cycle Stop State"
+   JS#SYS_END
+   JS#LOG_BEG("LOG")
+   MG{EH}{N},"Entering Cycle Stop State"
+   JS#LOG_END
+EN
+
+#C2002
+   vSTOPMSG=2002
+   JS#SYS_BEG
+   MG{EH}{N},"AUTO PURGE!!!"
+   JS#SYS_END
+EN
+
+#C2003
+   vSTOPMSG=2003
+   JS#SYS_BEG
+   MG{EH}{N},"Moving to Solvent!!!"
+   JS#SYS_END
+EN
+
+
+REM =================================
+REM  Unsolicited Messages
+REM =================================
+#U010
+   JS#SYS_BEG
+   MG {EH}{N},"Moving to Calibration Reference Point...."
+   JS#SYS_END
+EN
+
+#U015
+   vPAGE=1
+   JS#SYS_BEG
+   MG {EH}{N},"Entering Manual Mode"
+   JS#SYS_END
+   JS#LOG_BEG("LOG")
+   MG {EH}{N},"Entering Manual Mode"
+   JS#LOG_END
+EN
+
+#U020
+   JS#SYS_BEG
+   MG{EH}{N},"Entering Auto Cycle State"
+   JS#SYS_END
+   JS#LOG_BEG("LOG")
+   MG{EH}{N},"Entering Auto Cycle State"
+   JS#LOG_END
+EN
+
+#U025
+   JP#U025,IN_MSG=1;IN_MSG=1
+   vACK=0
+   MG{EH}{^02},"<LS1>Cycle Time: ",{F3.1}CTM," sec."{^03}
+   JS#WT_ACK
+   vACK=0
+   MG{EH}{^02},"<LS2>Cycle Count: ",{F8.0}CCNT{^03}
+   JS#WT_ACK;IN_MSG=0
+EN
+
+#U036
+   JS#SYS_BEG
+   MG{EH}{N},"--------- Cycle Complete ---------"
+   JS#SYS_END
+EN
+
+#U040
+   JS#SYS_BEG
+   MG{EH}{N},"Entering Machine Setup"
+   JS#SYS_END
+   JS#LOG_BEG("LOG")
+   MG{EH}{N},"Entering Machine Setup"
+   JS#LOG_END
+EN
+
+#U045
+   JS#SYS_BEG
+   MG{EH}{N},"Waiting for path..."
+   JS#SYS_END
+EN
+
+#U100
+   JS#SYS_BEG
+   MG{EH}{N},"Saving data...please wait."
+   JS#BURN
+   JS#SYS_END
+EN
+
+REM ===============================================
+REM  Error-Checking Subroutines
+REM ===============================================
+REM =================================
+REM  Wait for Continue Button
+REM =================================
+#W_VCONT
+   JP#SCAN,vQUIT=2
+   JP#W_VCONT,vCONT<>1
+   vCONT=0
+EN
+
+REM =================================
+REM  Reset Portal Controls
+REM =================================
+#BT_REL
+   vCONT=0
+   vCA_BUT=0
+   vNDL_CAL=0
+   vAUTO=0
+   vCSTOP=0
+   vSETUP=0
+   vMANUAL=0
+EN
+
+REM =================================
+REM  Wait for Teach Pendent Button Release
+REM =================================
+#TKEYREL
+   JP#TKEYREL,(@IN[iTEACH]*@IN[iPURGE]*@IN[iAXIS])=0
+   WT50
+EN
+
+#PKEYREL
+   CHEAD=DV_ID
+   JP#PKEYREL,(@IN[iPURGE]=0)
+   WT50
+EN
+
+REM ===============================================
+REM  Wait for Pneumatic Input
+REM ===============================================
+REM   ^a : SENINP - input bit
+REM   ^b : ZORO - desired state of input bit
+REM   ^c : TIME - time when JS#OPTO was called
+REM   ^d : PNEC - pneumatic error code (message #)
+REM ===============================================
+#OPTO
+   JP#NOOP,@IN[^a]=^b
+   JP#OPTO,(TIME-(^c))<PNTO
+   PNEC=^d
+   VPNTO=1
+   JP#IDLE
+EN
+
+REM =================================
+REM  Wait for Door to Close
+REM =================================
+#DR_CLOS
+   JP#DR_SHUT,@IN[iDOOR]=1
+   JS#S2021
+#DR_CLO1
+   JP#DR_CLO1,@IN[iDOOR]<>1
+#DR_SHUT
+   DRFLAG=1
+   IF(PLYBCK=1);vPAGE=1;ENDIF
+   JP#NOOP,TEACH=0
+EN
+
+REM =================================
+REM  Move to Safe-Z Height
+REM =================================
+#SAFEZ
+   PAZ=0
+   BGZ;AMZ
+   JS#ALLUP,SO_EN=1
+   WT (250*SO_EN*(1-ST_BY)*ms)
+EN
+
+REM ===============================================
+REM  Group Subroutines
+REM ===============================================
+REM =================================
+REM  Pneumatic Reset
+REM =================================
+#ALLUP
+   OB oH1Z,(oH1Z=oNA)
+   OB oH2Z,(oH2Z=oNA)
+   OB oH3Z,(oH3Z=oNA)
+   OB oH4Z,(oH4Z=oNA)
+
+   JS#TLUP(1,1,TYPE[1]),(oH1Z<>oNA)
+   JS#TLUP(1,2,TYPE[2]),(oH2Z<>oNA)
+   JS#TLUP(1,3,TYPE[3]),(oH3Z<>oNA)
+   JS#TLUP(1,4,TYPE[4]),(oH4Z<>oNA)
+
+   JS#TLRA(1,1,TYPE[1]),(oH1RA<>oNA)
+   JS#TLRA(1,2,TYPE[2]),(oH2RA<>oNA)
+   JS#TLRA(1,3,TYPE[3]),(oH3RA<>oNA)
+   JS#TLRA(1,4,TYPE[4]),(oH4RA<>oNA)
+
+   JP#NOOP,(ACFLAG=1)
+   JS#CNV_OF
+   JP#NOOP,((vPAGE=1)|(vPAGE=2))|(MODE=1)
+   JS#ST1OF;JS#ST2OF
+REM Board Locator Module JS#LOCOF      
+EN
+
+REM =================================
+REM  All Heads Down Synchronously (Auto Purge & Solvent ONLY)
+REM =================================
+#ALLDW
+   OB oH1Z,(1-(oH1Z=oNA))
+   OB oH2Z,(1-(oH2Z=oNA))
+   OB oH3Z,(1-(oH3Z=oNA))
+REM   OB oH4Z,(1-(oH4Z=oNA))
+
+   JS#TLDW(1,1,TYPE[1]),(oH1Z<>oNA)
+   JS#TLDW(1,2,TYPE[2]),(oH2Z<>oNA)
+   JS#TLDW(1,3,TYPE[3]),(oH3Z<>oNA)
+   JS#TLDW(1,4,TYPE[4]),(oH4Z<>oNA)
+EN
+
+REM =================================
+REM  All Heads On Synchronously (Auto Purge ONLY)
+REM =================================
+#ALLON
+
+REM =========================
+REM   VPX Motors On
+REM =========================
+REM  JS#VPX_ON
+REM =========================
+
+REM =========================
+REM  Gear Pump Motors On
+REM =========================
+REM  JS#PMP_PR
+REM =========================
+
+REM ===============
+REM   Turn SVX On
+REM ===============
+REM   JS#SVX_ON
+REM ===============
+
+REM ========================================================
+REM   Turn Material 1 Pressure On If Mode=On When Dispensing
+REM ========================================================
+REM Material PressureREM MAT 1  JS#PRS1_ON,(PRS1_MD=1)
+REM ========================================================
+
+REM ========================================================
+REM   Turn Material 2 Pressure On If Mode=On When Dispensing
+REM ========================================================
+REM Material PressureREM MAT 2  JS#PRS2_ON,(PRS2_MD=1)
+REM ========================================================
+
+   AN_TM[1]=TIME;AN_TM[2]=TIME
+   AN_TM[4]=TIME;AN_TM[5]=TIME
+   OB oH1AA,(1-(oH1AA=oNA))
+   OB oH2AA,(1-(oH2AA=oNA))
+   OB oH3AA,(1-(oH3AA=oNA))
+   OB oH4AA,(1-(oH4AA=oNA))
+   WT50
+   OB oH1VLV,(1-(oH1VLV=oNA))
+   OB oH2VLV,(1-(oH2VLV=oNA))
+   OB oH3VLV,(1-(oH3VLV=oNA))
+   OB oH4VLV,(1-(oH4VLV=oNA))
+EN
+
+REM =================================
+REM  All Heads Off Synchronously
+REM =================================
+#ALLOFF
+   OB oH1VLV,(oH1VLV=oNA)
+   OB oH2VLV,(oH2VLV=oNA)
+   OB oH3VLV,(oH3VLV=oNA)
+   OB oH4VLV,(oH4VLV=oNA)
+   WT50
+   OB oH1AA,(oH1AA=oNA)
+   OB oH2AA,(oH2AA=oNA)
+   OB oH3AA,(oH3AA=oNA)
+   OB oH4AA,(oH4AA=oNA)
+
+REM =========================
+REM   VPX Motors Off
+REM =========================
+REM  JS#VPX_OF
+REM =========================
+
+REM =========================
+REM  Gear Pump Motors Off
+REM =========================
+REM  JS#PMP_OF
+REM =========================
+
+REM ===============
+REM   Turn SVX Off
+REM ===============
+REM   JS#SVX_OF
+REM ===============
+
+REM ========================================================
+REM   Turn Material 1 Pressure Off If Mode=On When Dispensing
+REM ========================================================
+REM Material PressureREM MAT 1  JS#PRS1_OF,(PRS1_MD=1)
+REM ========================================================
+
+REM ========================================================
+REM   Turn Material 2 Pressure Off If Mode=On When Dispensing
+REM ========================================================
+REM Material PressureREM MAT 2  JS#PRS2_OF,(PRS2_MD=1)
+REM ========================================================
+EN
+
+REM ===============================================
+REM  Variable Assignments
+REM ===============================================
+#MAIN_IO
+
+   iNA=48;'Unused but valid input bit
+   oNA=24;'Unused but valid output bit
+
+REM -----------------
+REM  Inputs
+REM -----------------
+   iESTOP=1
+   iSTART=2
+   iDOOR=3
+   iBYPASS=4
+   iPOWER=5
+
+   iFLOW=8
+
+   iAXIS=27
+   iPURGE=26
+   iTEACH=25
+
+   iPIP1=7000
+   iPIP2=7001
+   iPIP3=7002
+
+   iFBSTP1=7016
+   iRBSTP1=7017
+
+   iFBSTP2=iNA
+   iRBSTP2=iNA
+
+   iH1Z=Inputs
+   iH1RB=Inputs
+   iH1RA=Inputs
+
+   iH2Z=Inputs
+   iH2RB=Inputs
+   iH2RA=Inputs
+
+   iH3Z=Inputs
+   iH3RB=Inputs
+   iH3RA=Inputs
+
+   iH4Z=Inputs
+   iH4RB=Inputs
+   iH4RA=Inputs
+
+   iBR_WDOG=7027
+
+   iUPRDY=7010
+   iDNBA=7011
+   iDNRDY=7011
+   iUPBA=7010
+
+   itUPBA=0
+   itDNRDY=0
+
+REM -----------------
+REM  Outputs
+REM -----------------
+   oPOWER=1
+
+   oBSTOP1=7024
+   oBSTOP2=oNA
+
+   oH1Z=Outputs
+   oH1RB=Outputs
+   oH1RA=Outputs
+   oH1AA=7025
+   oH1VLV=2
+
+   oH2Z=Outputs
+   oH2RB=Outputs
+   oH2RA=Outputs
+   oH2AA=7026
+   oH2VLV=3
+
+   oH3Z=Outputs
+   oH3RB=Outputs
+   oH3RA=Outputs
+   oH3AA=oNA
+   oH3VLV=4
+
+   oH4Z=Outputs
+   oH4RB=Outputs
+   oH4RA=Outputs
+   oH4AA=oNA
+   oH4VLV=5
+
+   oUPRDY=7016
+   oDNBA=7017
+   oDNRDY=oNA
+   oUPBA=oNA
+
+   oFIDLT=7005
+   oHSELT=7004
+   oBLKLT=7021
+
+   oRED=7000
+   oAMB=7001
+   oGRN=7002
+   oALM=7003
+
+   oBR_WDOG=7011
+
+   oTB_XLED=17
+   oTB_YLED=18
+   oTB_ZLED=19
+   oTB_WLED=20
+   oTB_RLED=21
+
+   oCV_1=7010
+   oCV_DIR=7011
+
+REM ===========================================
+REM   Module I/O Initialization
+REM ===========================================
+REM 'Flow Monitor I/O
+REM Flow Monitor Module    JS#FLO_IO
+REM ===========================================
+REM 'GSE Scale/Digital Low Level I/O
+REM Low Level Module  JS#LOW_IO
+REM ===========================================
+REM 'Needle Calibration I/O
+REM Needle Cal Module   JS#NDL_IO
+REM ===========================================
+REM 'Part Manager I/O
+   JS#PMG_IO
+REM ===========================================
+REM 'Board Locator I/O
+REM Board Locator Module   JS#LOC_IO
+REM ===========================================
+REM 'Gear Pump/Recirc I/O
+REM   JS#PMP_IO
+REM ===========================================
+REM 'Material Air Pressure I/O
+REM Material Pressure   JS#PRS_IO
+REM ===========================================
+REM 'Bi-Directional I/O
+REM   JS#BID_IO
+REM ===========================================
+REM 'VPX I/O
+REM   JS#VPX_IO
+REM ===========================================
+REM 'Shot Scale I/O
+REM   JS#SCL_IO
+REM ===========================================
+REM 'Heater Error I/O
+REM   JS#HTR_IO
+REM ===========================================
+REM 'Spray Width I/O
+REM   JS#WID_IO
+REM ===========================================
+REM 'Conveyor Width I/O
+REM cWidth Adjust Module   JS#CWA_IO
+REM ===========================================
+REM 'Valve Width I/O
+REM vWidth Adjust Module   JS#VWA_IO
+REM ===========================================
+REM 'Laser I/O
+REM   JS#LAS_IO
+REM ===========================================
+REM 'Indicator I/O
+REM   JS#IND_IO
+REM ===========================================
+REM 'JDX I/O
+REM   JS#JDX_IO
+REM ===========================================
+REM 'SVX I/O
+REM   JS#SVX_IO
+REM ===========================================
+REM 'Barcode Scanner I/O
+REM   JS#SCN_IO
+REM ===========================================
+REM 'Ionizer I/O
+REM   JS#ION_IO
+REM ===========================================
+
+#INTTOOL
+   DM aTOOL[512]
+   DM TYPE[15]
+   null=oNA
+
+REM ====================================
+REM   IO Size Allocated Per Tool (Default 16)
+REM ====================================
+   tOFFSET=16
+
+REM ====================================
+REM   Default Addressing Tool Bits
+REM ====================================
+REM  POS: DESCRIP:               I/O:
+REM  --------------------------------------
+REM   0   Tool On                (Output)
+REM   1   Tool Atom Air/Blow Off (Output)
+REM   2   Tool Z-Slide           (Output)
+REM   3   Tool Rotary A          (Output)
+REM   4   Tool Rotary B          (Output)
+REM   5   Tool Up Z              (Input)
+REM   6   Tool Rotary A          (Input)
+REM   7   Tool Rotary B          (Input)
+REM   8   SPARE
+REM   9   SPARE
+REM  10   SPARE
+REM  11   SPARE
+REM  12   SPARE
+REM  13   SPARE
+REM  14   SPARE
+REM  15   SPARE
+
+REM ===================================
+REM    Default Tool Types
+REM ===================================
+REM  0 = Non-Dispense
+REM  1 = Dispense Valve
+REM  2 = Spray Valve (No Atom)
+REM  3 = Spray Valve (Atom Air)
+REM  4 = Atom Air Only
+REM  5 = Servo (SV100, SVX, VPX450) Valve
+
+REM ===================================
+REM    Custom Tools
+REM ===================================
+REM  6 = ...
+REM  7 = ...
+REM  8 = ...
+REM  9 = ...
+REM 10 = ...
+REM 11 = Jetter Recipe #1
+REM 12 = Jetter Recipe #2
+REM 13 = Jetter Recipe #3
+REM 14 = Jetter Recipe #4
+REM 15 = Jetter Recipe #5
+REM 16 = Jetter Recipe #6
+REM ===================================
+
+REM ===================================
+REM    Device Type Assignment
+REM ===================================
+   TYPE[1]=?
+   TYPE[2]=?
+   TYPE[3]=?
+REM   TYPE[4]=0
+REM   TYPE[5]=0
+REM   TYPE[6]=0
+REM   TYPE[7]=0
+REM   TYPE[8]=0
+REM   TYPE[9]=0
+
+REM ====================================
+REM   Tool Addressing Array
+REM ====================================
+   aTOOL[0]=null
+   aTOOL[1]=null
+   aTOOL[2]=null
+   aTOOL[3]=null
+   aTOOL[4]=null
+   aTOOL[5]=null
+   aTOOL[6]=null
+   aTOOL[7]=null
+   aTOOL[8]=null
+   aTOOL[9]=null
+   aTOOL[10]=null
+   aTOOL[11]=null
+   aTOOL[12]=null
+   aTOOL[13]=null
+   aTOOL[14]=null
+   aTOOL[15]=null
+   aTOOL[16]=oH1VLV
+   aTOOL[17]=oH1AA
+   aTOOL[18]=oH1Z
+   aTOOL[19]=oH1RA
+   aTOOL[20]=oH1RB
+   aTOOL[21]=iH1Z
+   aTOOL[22]=iH1RA
+   aTOOL[23]=iH1RB
+   aTOOL[24]=null
+   aTOOL[25]=null
+   aTOOL[26]=null
+   aTOOL[27]=null
+   aTOOL[28]=null
+   aTOOL[29]=null
+   aTOOL[30]=null
+   aTOOL[31]=null
+   aTOOL[32]=oH2VLV
+   aTOOL[33]=oH2AA
+   aTOOL[34]=oH2Z
+   aTOOL[35]=oH2RA
+   aTOOL[36]=oH2RB
+   aTOOL[37]=iH2Z
+   aTOOL[38]=iH2RA
+   aTOOL[39]=iH2RB
+   aTOOL[40]=null
+   aTOOL[41]=null
+   aTOOL[42]=null
+   aTOOL[43]=null
+   aTOOL[44]=null
+   aTOOL[45]=null
+   aTOOL[46]=null
+   aTOOL[47]=null
+   aTOOL[48]=oH3VLV
+   aTOOL[49]=oH3AA
+   aTOOL[50]=oH3Z
+   aTOOL[51]=oH3RA
+   aTOOL[52]=oH3RB
+   aTOOL[53]=iH3Z
+   aTOOL[54]=iH3RA
+   aTOOL[55]=iH3RB
+   aTOOL[56]=null
+   aTOOL[57]=null
+   aTOOL[58]=null
+   aTOOL[59]=null
+   aTOOL[60]=null
+   aTOOL[61]=null
+   aTOOL[62]=null
+   aTOOL[63]=null
+   aTOOL[64]=oH4VLV
+   aTOOL[65]=oH4AA
+   aTOOL[66]=oH4Z
+   aTOOL[67]=oH4RA
+   aTOOL[68]=oH4RB
+   aTOOL[69]=iH4Z
+   aTOOL[70]=iH4RA
+   aTOOL[71]=iH4RB
+   aTOOL[72]=null
+   aTOOL[73]=null
+   aTOOL[74]=null
+   aTOOL[75]=null
+   aTOOL[76]=null
+   aTOOL[77]=null
+   aTOOL[78]=null
+   aTOOL[79]=null
+   aTOOL[80]=null
+   aTOOL[81]=null
+   aTOOL[82]=null
+   aTOOL[83]=null
+   aTOOL[84]=null
+   aTOOL[85]=null
+   aTOOL[86]=null
+   aTOOL[87]=null
+   aTOOL[88]=null
+   aTOOL[89]=null
+   aTOOL[90]=null
+   aTOOL[91]=null
+   aTOOL[92]=null
+   aTOOL[93]=null
+   aTOOL[94]=null
+   aTOOL[95]=null
+   aTOOL[96]=null
+   aTOOL[97]=null
+   aTOOL[98]=null
+   aTOOL[99]=null
+   aTOOL[100]=null
+   aTOOL[101]=null
+   aTOOL[102]=null
+   aTOOL[103]=null
+   aTOOL[104]=null
+   aTOOL[105]=null
+   aTOOL[106]=null
+   aTOOL[107]=null
+   aTOOL[108]=null
+   aTOOL[109]=null
+   aTOOL[110]=null
+   aTOOL[111]=null
+   aTOOL[112]=null
+   aTOOL[113]=null
+   aTOOL[114]=null
+   aTOOL[115]=null
+   aTOOL[116]=null
+   aTOOL[117]=null
+   aTOOL[118]=null
+   aTOOL[119]=null
+   aTOOL[120]=null
+   aTOOL[121]=null
+   aTOOL[122]=null
+   aTOOL[123]=null
+   aTOOL[124]=null
+   aTOOL[125]=null
+   aTOOL[126]=null
+   aTOOL[127]=null
+   aTOOL[128]=null
+   aTOOL[129]=null
+   aTOOL[130]=null
+   aTOOL[131]=null
+   aTOOL[132]=null
+   aTOOL[133]=null
+   aTOOL[134]=null
+   aTOOL[135]=null
+   aTOOL[136]=null
+   aTOOL[137]=null
+   aTOOL[138]=null
+   aTOOL[139]=null
+   aTOOL[140]=null
+   aTOOL[141]=null
+   aTOOL[142]=null
+   aTOOL[143]=null
+EN
+
+REM ===============================================
+REM  Machine-Specific Information
+REM ===============================================
+#IMACH
+REM--------------------
+REM  Motor Setup
+REM--------------------
+   AXES=?
+   MOXYZ
+
+   MT 1,1,1
+   CE 0,0,0
+   SF 1,1,1
+
+   IF(AXES=4)
+      MOW
+      MTW=1
+      CEW=0
+      SFW=1
+   ENDIF
+
+   CN -1,-1,-1,0,0
+
+   SCALE_Z=10
+
+REM------------------------
+REM  Accel/Decel Smoothing
+REM------------------------
+REM 1 = No Filtering
+REM .004 = Maximum Filtering
+REM------------------------
+   IT 1,1,1,1
+
+REM------------------------
+REM  Calibration Positions
+REM------------------------
+   PT_CAL1[0]=30302;PT_CAL1[1]=74417;PT_CAL1[2]=5262;PT_CAL1[3]=16767
+   PT_CAL2[0]=25000;PT_CAL2[1]=25000;PT_CAL2[2]=0;PT_CAL2[3]=16767
+   PT_CAL3[0]=43579;PT_CAL3[1]=39950;PT_CAL3[2]=13545;PT_CAL3[3]=16767
+   PT_CAL4[0]=43579;PT_CAL4[1]=39950;PT_CAL4[2]=13545;PT_CAL4[3]=26707
+   
+REM--------------------------------
+REM  Machine has Calibration Plate
+REM--------------------------------   
+   CAL_PLT=0
+
+   PT_SPIKE=12192
+
+REM--------------------
+REM  Time Outs
+REM--------------------
+   PNTO=4000
+
+REM ====================================
+REM  Program Flags
+REM ====================================
+   LT_EN=1
+   EMAIL=0
+   NO_VIS=?
+
+#TUNE
+   WT100
+   AC 150000,150000,150000/SCALE_Z
+   DC 150000,150000,150000/SCALE_Z
+   SP 60000,60000,100000/SCALE_Z
+   IF(AXES=4)
+      ACW=150000
+      DCW=150000
+      SPW=60000
+   ENDIF
+
+   VA*=70000;VD*=70000
+
+   TL*=9.9999
+
+   JS#LIMITS
+
+   KD 500,500,500
+   KP 80,75,125
+   KI 0.75,0.75,2.5
+   IF(AXES=4)
+      KDW=145
+      KPW=80
+      KIW=0.85
+   ENDIF
+EN
+
+#SAVE_SP
+   SV_SPX=_SPX;SV_SPY=_SPY;SV_SPZ=_SPZ;SV_SPW=_SPW
+   SV_ACX=_ACX;SV_ACY=_ACY;SV_ACZ=_ACZ;SV_ACW=_ACW
+   SV_DCX=_DCX;SV_DCY=_DCY;SV_DCZ=_DCZ;SV_DCW=_DCW
+   SV_VAX=_VAX;SV_VAY=_VAY;SV_VAZ=_VAZ;SV_VAW=_VAW
+   SV_VDX=_VDX;SV_VDY=_VDY;SV_VDZ=_VDZ;SV_VDW=_VDW
+EN
+
+#REST_SP
+   AC SV_ACX,SV_ACY,SV_ACZ,SV_ACW
+   DC SV_DCX,SV_DCY,SV_DCZ,SV_DCW
+   SP SV_SPX,SV_SPY,SV_SPZ,SV_SPW
+   VA SV_VAX,SV_VAY,SV_VAZ,SV_VAW
+   VD SV_VDX,SV_VDY,SV_VDZ,SV_VDW
+
+   DA SV_ACX,SV_ACY,SV_ACZ,SV_ACW
+   DA SV_DCX,SV_DCY,SV_DCZ,SV_DCW
+   DA SV_SPX,SV_SPY,SV_SPZ,SV_SPW
+   DA SV_VAX,SV_VAY,SV_VAZ,SV_VAW
+   DA SV_VDX,SV_VDY,SV_VDZ,SV_VDW
+   JS#BURN
+EN
+
+#LIMITS
+   BL -12000,-7800,-3500
+   FL 82000,78700,19000
+   IF(AXES=4)
+      BLW=-4500
+      FLW=35400
+   ENDIF
+EN
+
+REM ===============================================
+REM  External Communication Routines
+REM ===============================================
+REM =================================
+REM  Set IP Address & COM Configuration
+REM =================================
+#IP_ADDR
+   IA 100,100,100,101
+   CFA;CW1;CW,0
+   WT(500*ms)
+   MW1
+   BN
+EN
+
+REM =================================
+REM  Wait for Unsolicited Message Acknowledgment
+REM =================================
+#WT_ACK
+   ACK_TO=(3000*ms)
+   ATIM=TIME
+#ACK_LP
+   JP#NOOP,(TIME-ATIM)>ACK_TO
+   JP#ACK_LP,vACK<>1
+EN
+
+REM =========================================
+REM   Pathmaster Valve Routines
+REM =========================================
+REM =======================================
+REM   Default Tool Addressing Bits
+REM =======================================
+REM  POS: DESCRIP:               I/O:
+REM  --------------------------------------
+REM   0   Tool On                (Output)
+REM   1   Tool Atom Air/Blow Off (Output)
+REM   2   Tool Z-Slide           (Output)
+REM   3   Tool Rotary A          (Output)
+REM   4   Tool Rotary B          (Output)
+REM   5   Tool Up Z              (Input)
+REM   6   Tool Rotary A          (Input)
+REM   7   Tool Rotary B          (Input)
+REM   8   SPARE
+REM   9   SPARE
+REM  10   SPARE
+REM  11   SPARE
+REM  12   SPARE
+REM  13   SPARE
+REM  14   SPARE
+REM  15   SPARE
+
+REM ===================================
+REM    Default Tool Types
+REM ===================================
+REM  0 = Non-Dispense
+REM  1 = Dispense Valve
+REM  2 = Spray Valve (No Atom)
+REM  3 = Spray Valve (Atom Air)
+REM  4 = Atom Air Only
+REM  5 = Servo (SV100, SVX, VPX450) Valve
+
+REM ===================================
+REM    Custom Tools
+REM ===================================
+REM  6 = ...
+REM  7 = ...
+REM  8 = ...
+REM  9 = ...
+REM ===================================
+
+REM ===================================
+REM    Tool Routine Pointers
+REM ===================================
+REM  ^a = Virtual Tool ID (TL_ID)
+REM  ^b = Device ID (DV_ID)
+REM  ^c = Device/Tool Type ID (TT_ID)
+
+REM ---------------------
+REM   Tool On
+REM ---------------------
+#TLON
+   JP#NOOP,^b=0
+   JP#NOOP,VLV=0
+
+REM =================================
+REM  Jump To Dual/Multi Tool Routine
+REM =================================
+REM   JP#DTLON,((^b=#)|(^b=#)|(^b=#))
+
+REM ==================================
+REM   Turn Correct JDX Recipe On
+REM ==================================
+REM   RECIPE=(^c-11)
+REM   JP#JDX_ON,(^c>10)
+REM ==================================
+
+   AN_TM[^b]=TIME
+
+REM ==================================
+REM   Turn VPX/Gear Pumps/SVX On
+REM ==================================
+REM   JS#PMP_ON,(^c=5)
+REM ==================================
+
+REM ========================================================
+REM   Turn Material 1 Pressure On If Mode=On When Dispensing
+REM ========================================================
+REM Material PressureREM MAT 1  JS#PRS1_ON,((^c=1)&(PRS1_MD=1))
+REM ========================================================
+
+REM ========================================================
+REM   Turn Material 2 Pressure On If Mode=On When Dispensing
+REM ========================================================
+REM Material PressureREM MAT 2  JS#PRS2_ON,((^c=1)&(PRS2_MD=1))
+REM ========================================================
+
+REM ==================
+REM   Turn SVX On
+REM ==================
+REM   JS#SVX_ON,(^c=5)
+REM ==================
+
+   IF((^c=3)|(^c=4))
+      SB aTOOL[(^b*tOFFSET)+1]
+      WT(50*ms)
+   ENDIF
+   IF((^c>0)&(^c<4))
+      SB aTOOL[(^b*tOFFSET)+0]
+   ENDIF
+EN
+
+REM ---------------------
+REM   Tool Off
+REM ---------------------
+#TLOF
+   JP#NOOP,^b=0
+   JP#NOOP,VLV=0
+
+REM =================================
+REM  Jump To Dual/Multi Tool Routine
+REM =================================
+REM   JP#DTLOF,((^b=#)|(^b=#)|(^b=#))
+
+REM ==================================
+REM   Turn JDX Off
+REM ==================================
+REM   JP#JDX_OF,(^c>10)
+REM ==================================
+
+   IF((^c>0)&(^c<4))
+      CB aTOOL[(^b*tOFFSET)+0]
+   ENDIF
+   IF((^c=3)|(^c=4))
+      WT(50*ms)
+      CB aTOOL[(^b*tOFFSET)+1]
+   ENDIF
+
+   JS#APRS,@OUT[aTOOL[^b*tOFFSET+0]]=0
+
+REM ==================================
+REM   Turn VPX/Gear Pumps/SVX Off
+REM ==================================
+REM   JS#PMP_OF,(^c=5)
+REM ==================================
+
+REM ========================================================
+REM   Turn Material 1 Pressure Off If Mode=On When Dispensing
+REM ========================================================
+REM Material PressureREM MAT 1  JS#PRS1_OF,(PRS1_MD=1)
+REM ========================================================
+
+REM ========================================================
+REM   Turn Material 2 Pressure Off If Mode=On When Dispensing
+REM ========================================================
+REM Material PressureREM MAT 2  JS#PRS2_OF,(PRS2_MD=1)
+REM ========================================================
+
+REM ==================
+REM   Turn SVX Off
+REM ==================
+REM   JS#SVX_OF,(^c=5)
+REM ==================
+EN
+
+REM ---------------------
+REM   Tool Up
+REM ---------------------
+#TLUP
+REM =================================
+REM  Jump To Dual/Multi Tool Routine
+REM =================================
+REM   JP#DTLUP,((^b=#)|(^b=#)|(^b=#))
+
+   SENINP=aTOOL[(^b*tOFFSET)+5]
+
+   PNEC=1210+^b
+
+   CB aTOOL[(^b*tOFFSET)+2]
+   JS#OPTO(SENINP,0,TIME,PNEC)
+EN
+
+REM ---------------------
+REM   Tool Down
+REM ---------------------
+#TLDW
+REM =================================
+REM  Jump To Dual/Multi Tool Routine
+REM =================================
+REM   JP#DTLDW,((^b=#)|(^b=#)|(^b=#))
+
+   SENINP=aTOOL[(^b*tOFFSET)+5]
+
+   PNEC=1220+^b
+
+   SB aTOOL[(^b*tOFFSET)+2]
+   JS#OPTO(SENINP,1,TIME,PNEC)
+EN
+
+REM ---------------------
+REM   Tool Rotary A
+REM ---------------------
+#TLRA
+REM =================================
+REM  Jump To Dual/Multi Tool Routine
+REM =================================
+REM   JP#DTLRA,((^b=#)|(^b=#)|(^b=#))
+
+   SENINP=aTOOL[(^b*tOFFSET)+6]
+
+   PNEC=1230+^b
+
+   SB aTOOL[(^b*tOFFSET)+3]
+   CB aTOOL[(^b*tOFFSET)+4]
+   JS#OPTO(SENINP,1,TIME,PNEC)
+EN
+
+REM ---------------------
+REM   Tool Rotary B
+REM ---------------------
+#TLRB
+REM =================================
+REM  Jump To Dual/Multi Tool Routine
+REM =================================
+REM   JP#DTLRB,((^b=#)|(^b=#)|(^b=#))
+
+   SENINP=aTOOL[(^b*tOFFSET)+7]
+
+   PNEC=1240+^b
+
+   CB aTOOL[(^b*tOFFSET)+3]
+   SB aTOOL[(^b*tOFFSET)+4]
+   JS#OPTO(SENINP,1,TIME,PNEC)
+EN
+
+REM ---------------------
+REM   Tool Rotary C
+REM ---------------------
+#TLRC
+REM =================================
+REM  Jump To Dual/Multi Tool Routine
+REM =================================
+REM   JP#DTLRC,((^b=#)|(^b=#)|(^b=#))
+
+EN
+
+REM ==============================================
+REM   Dual/Multi Tool Routines
+REM ==============================================
+REM ---------------------
+REM   Dual/Multi Tool On
+REM ---------------------
+#DTLON
+REM ==============================
+REM   Tool 1 & Tool 2 Dual
+REM ==============================
+REM   IF(^b=#)
+REM      IF((^c=3)|(^c=4))
+REM         AN_TM[1]=TIME
+REM         AN_TM[2]=TIME
+REM         SB aTOOL[(1*tOFFSET)+1]
+REM         SB aTOOL[(2*tOFFSET)+1]
+REM         WT(50*ms)
+REM      ENDIF
+REM      IF((^c>0)&(^c<4))
+REM         SB aTOOL[(1*tOFFSET)+0]
+REM         SB aTOOL[(2*tOFFSET)+0]
+REM      ENDIF
+REM      JP#NOOP
+REM   ENDIF
+
+REM ==============================
+REM   Tool 3 & Tool 4 Dual
+REM ==============================
+REM   IF(^b=#)
+REM      IF((^c=3)|(^c=4))
+REM         AN_TM[4]=TIME
+REM         AN_TM[5]=TIME
+REM         SB aTOOL[(3*tOFFSET)+1]
+REM         SB aTOOL[(4*tOFFSET)+1]
+REM         WT(50*ms)
+REM      ENDIF
+REM      IF((^c>0)&(^c<4))
+REM         SB aTOOL[(3*tOFFSET)+0]
+REM         SB aTOOL[(4*tOFFSET)+0]
+REM      ENDIF
+REM      JP#NOOP
+REM   ENDIF
+
+REM ==============================
+REM   Tools 1-4 Quad
+REM ==============================
+REM   IF(^b=#)
+REM      IF((^c=3)|(^c=4))
+REM         SB aTOOL[(1*tOFFSET)+1]
+REM         SB aTOOL[(2*tOFFSET)+1]
+REM         SB aTOOL[(3*tOFFSET)+1]
+REM         SB aTOOL[(4*tOFFSET)+1]
+REM         WT(50*ms)
+REM      ENDIF
+REM      IF((^c>0)&(^c<4))
+REM         SB aTOOL[(1*tOFFSET)+0]
+REM         SB aTOOL[(2*tOFFSET)+0]
+REM         SB aTOOL[(3*tOFFSET)+0]
+REM         SB aTOOL[(4*tOFFSET)+0]
+REM      ENDIF
+REM   ENDIF
+EN
+
+REM ---------------------
+REM   Dual/Multi Tool Off
+REM ---------------------
+#DTLOF
+REM   JS#APRS
+REM
+REM   IF((^c>0)&(^c<4))
+REM      CB aTOOL[(1*tOFFSET)+0]
+REM      CB aTOOL[(2*tOFFSET)+0]
+REM      CB aTOOL[(3*tOFFSET)+0]
+REM      CB aTOOL[(4*tOFFSET)+0]
+REM   ENDIF
+REM   IF((^c=3)|(^c=4))
+REM      WT(50*ms)
+REM      CB aTOOL[(1*tOFFSET)+1]
+REM      CB aTOOL[(2*tOFFSET)+1]
+REM      CB aTOOL[(3*tOFFSET)+1]
+REM      CB aTOOL[(4*tOFFSET)+1]
+REM   ENDIF
+EN
+
+REM ---------------------
+REM   Dual/Multi Tool Up
+REM ---------------------
+#DTLUP
+REM ==============================
+REM   Tool 1 & Tool 2 Dual
+REM ==============================
+REM   IF(^b=#)
+REM      CB aTOOL[(1*tOFFSET)+2]
+REM      CB aTOOL[(2*tOFFSET)+2]
+
+REM      SENINP=aTOOL[(1*tOFFSET)+5]
+
+REM      JS#OPTO(SENINP,0,TIME,1211)
+
+REM      SENINP=aTOOL[(2*tOFFSET)+5]
+
+REM      JS#OPTO(SENINP,0,TIME,1212)
+
+REM      JP#NOOP
+REM   ENDIF
+
+REM ==============================
+REM   Tool 3 & Tool 4 Dual
+REM ==============================
+REM   IF(^b=#)
+REM      CB aTOOL[(3*tOFFSET)+2]
+REM      CB aTOOL[(4*tOFFSET)+2]
+
+REM      SENINP=aTOOL[(3*tOFFSET)+5]
+
+REM      JS#OPTO(SENINP,0,TIME,1213)
+
+REM      SENINP=aTOOL[(4*tOFFSET)+5]
+
+REM      JS#OPTO(SENINP,0,TIME,1214)
+
+REM      JP#NOOP
+REM   ENDIF
+
+REM ==============================
+REM   Tools 1-4 Quad
+REM ==============================
+REM   IF(^b=#)
+REM      CB aTOOL[(1*tOFFSET)+2]
+REM      CB aTOOL[(2*tOFFSET)+2]
+REM      CB aTOOL[(3*tOFFSET)+2]
+REM      CB aTOOL[(4*tOFFSET)+2]
+
+REM      SENINP=aTOOL[(1*tOFFSET)+5]
+
+REM      JS#OPTO(SENINP,0,TIME,1211)
+
+REM      SENINP=aTOOL[(2*tOFFSET)+5]
+
+REM      JS#OPTO(SENINP,0,TIME,1212)
+
+REM      SENINP=aTOOL[(3*tOFFSET)+5]
+
+REM      JS#OPTO(SENINP,0,TIME,1213)
+
+REM      SENINP=aTOOL[(4*tOFFSET)+5]
+
+REM      JS#OPTO(SENINP,0,TIME,1214)
+
+REM   ENDIF
+EN
+
+REM -----------------------
+REM   Dual/Multi Tool Down
+REM -----------------------
+#DTLDW
+REM ==============================
+REM   Tool 1 & Tool 2 Dual
+REM ==============================
+REM   IF(^b=#)
+REM      SB aTOOL[(1*tOFFSET)+2]
+REM      SB aTOOL[(2*tOFFSET)+2]
+
+REM      SENINP=aTOOL[(1*tOFFSET)+5]
+
+REM      JS#OPTO(SENINP,1,TIME,1221)
+
+REM      SENINP=aTOOL[(2*tOFFSET)+5]
+
+REM      JS#OPTO(SENINP,1,TIME,1222)
+
+REM      JP#NOOP
+REM   ENDIF
+
+REM ==============================
+REM   Tool 3 & Tool 4 Dual
+REM ==============================
+REM   IF(^b=#)
+REM      SB aTOOL[(3*tOFFSET)+2]
+REM      SB aTOOL[(4*tOFFSET)+2]
+
+REM      SENINP=aTOOL[(3*tOFFSET)+5]
+
+REM      JS#OPTO(SENINP,1,TIME,1223)
+
+REM      SENINP=aTOOL[(4*tOFFSET)+5]
+
+REM      JS#OPTO(SENINP,1,TIME,1224)
+
+REM      JP#NOOP
+REM   ENDIF
+
+REM ==============================
+REM   Tools 1-4 Quad
+REM ==============================
+REM   IF(^b=#)
+REM      SB aTOOL[(1*tOFFSET)+2]
+REM      SB aTOOL[(2*tOFFSET)+2]
+REM      SB aTOOL[(3*tOFFSET)+2]
+REM      SB aTOOL[(4*tOFFSET)+2]
+
+REM      SENINP=aTOOL[(1*tOFFSET)+5]
+
+REM      JS#OPTO(SENINP,1,TIME,1221)
+
+REM      SENINP=aTOOL[(2*tOFFSET)+5]
+
+REM      JS#OPTO(SENINP,1,TIME,1222)
+
+REM      SENINP=aTOOL[(3*tOFFSET)+5]
+
+REM      JS#OPTO(SENINP,1,TIME,1223)
+
+REM      SENINP=aTOOL[(4*tOFFSET)+5]
+
+REM      JS#OPTO(SENINP,1,TIME,1224)
+
+REM   ENDIF
+EN
+
+REM ---------------------------
+REM   Dual/Multi Tool Rotary A
+REM ---------------------------
+#DTLRA
+REM   SB aTOOL[(1*tOFFSET)+3]
+REM   CB aTOOL[(1*tOFFSET)+4]
+
+REM   SB aTOOL[(2*tOFFSET)+3]
+REM   CB aTOOL[(2*tOFFSET)+4]
+
+REM   SB aTOOL[(3*tOFFSET)+3]
+REM   CB aTOOL[(3*tOFFSET)+4]
+
+REM   SB aTOOL[(4*tOFFSET)+3]
+REM   CB aTOOL[(4*tOFFSET)+4]
+
+REM   SENINP=aTOOL[(1*tOFFSET)+6]
+
+REM   JS#OPTO(SENINP,1,TIME,1231)
+
+REM   SENINP=aTOOL[(2*tOFFSET)+6]
+
+REM   JS#OPTO(SENINP,1,TIME,1232)
+
+REM   SENINP=aTOOL[(3*tOFFSET)+6]
+
+REM   JS#OPTO(SENINP,1,TIME,1233)
+
+REM   SENINP=aTOOL[(4*tOFFSET)+6]
+
+REM   JS#OPTO(SENINP,1,TIME,1234)
+
+EN
+
+REM ---------------------------
+REM   Dual/Multi Tool Rotary B
+REM ---------------------------
+#DTLRB
+REM ==============================
+REM   Tool 1 & Tool 2 Dual
+REM ==============================
+REM   IF(^b=#)
+REM      CB aTOOL[(1*tOFFSET)+3]
+REM      SB aTOOL[(1*tOFFSET)+4]
+
+REM      CB aTOOL[(2*tOFFSET)+3]
+REM      SB aTOOL[(2*tOFFSET)+4]
+
+REM      SENINP=aTOOL[(1*tOFFSET)+7]
+
+REM      JS#OPTO(SENINP,1,TIME,1241)
+
+REM      SENINP=aTOOL[(2*tOFFSET)+7]
+
+REM      JS#OPTO(SENINP,1,TIME,1242)
+
+REM      JP#NOOP
+REM   ENDIF
+
+REM ==============================
+REM   Tool 3 & Tool 4 Dual
+REM ==============================
+REM   IF(^b=#)
+REM      CB aTOOL[(3*tOFFSET)+3]
+REM      SB aTOOL[(3*tOFFSET)+4]
+
+REM      CB aTOOL[(4*tOFFSET)+3]
+REM      SB aTOOL[(4*tOFFSET)+4]
+
+REM      SENINP=aTOOL[(3*tOFFSET)+7]
+
+REM      JS#OPTO(SENINP,1,TIME,1243)
+
+REM      SENINP=aTOOL[(4*tOFFSET)+7]
+
+REM      JS#OPTO(SENINP,1,TIME,1244)
+
+REM      JP#NOOP
+REM   ENDIF
+
+REM ==============================
+REM   Tools 1-4 Quad
+REM ==============================
+REM   IF(^b=#)
+REM      CB aTOOL[(1*tOFFSET)+3]
+REM      SB aTOOL[(1*tOFFSET)+4]
+
+REM      CB aTOOL[(2*tOFFSET)+3]
+REM      SB aTOOL[(2*tOFFSET)+4]
+
+REM      CB aTOOL[(3*tOFFSET)+3]
+REM      SB aTOOL[(3*tOFFSET)+4]
+
+REM      CB aTOOL[(4*tOFFSET)+3]
+REM      SB aTOOL[(4*tOFFSET)+4]
+
+REM      SENINP=aTOOL[(1*tOFFSET)+7]
+
+REM      JS#OPTO(SENINP,1,TIME,1241)
+
+REM      SENINP=aTOOL[(2*tOFFSET)+7]
+
+REM      JS#OPTO(SENINP,1,TIME,1242)
+
+REM      SENINP=aTOOL[(3*tOFFSET)+7]
+
+REM      JS#OPTO(SENINP,1,TIME,1243)
+
+REM      SENINP=aTOOL[(4*tOFFSET)+7]
+
+REM      JS#OPTO(SENINP,1,TIME,1244)
+
+REM   ENDIF
+EN
+
+REM ---------------------------
+REM   Dual/Multi Tool Rotary C
+REM ---------------------------
+#DTLRC
+
+EN
+
+
+REM ===============================================
+REM  Conveyor Routines
+REM ===============================================
+REM =================================
+REM  Conveyor Drive Routines
+REM =================================
+
+REM----------------------------------
+REM  Conveyor On
+REM----------------------------------
+#CNV_ON
+   SB oCV_1
+EN
+
+REM----------------------------------
+REM  Conveyor Off
+REM----------------------------------
+#CNV_OF
+REM =============================================
+REM   Bi-Directional Conveyor Reset Direction Bit
+REM =============================================
+REM   JS#CONV_DN
+REM ============================================
+   CB oCV_1
+EN
+
+REM =================================
+REM  Board Stop Routines
+REM =================================
+REM----------------------------------
+REM  Board Stop 1 On
+REM----------------------------------
+#ST1ON
+   JP#NOOP,oBSTOP1=oNA
+   SB oBSTOP1
+   JS#OPTO(iFBSTP1,1,TIME,1200)
+   JS#OPTO(iRBSTP1,1,TIME,1201)
+EN
+
+REM----------------------------------
+REM  Board Stop 1 Off
+REM----------------------------------
+#ST1OF
+   JP#NOOP,oBSTOP1=oNA
+   CB oBSTOP1
+   JS#OPTO(iFBSTP1,0,TIME,1202)
+   JS#OPTO(iRBSTP1,0,TIME,1203)
+EN
+
+REM----------------------------------
+REM  Board Stop 2 On
+REM----------------------------------
+#ST2ON
+   JP#NOOP,oBSTOP2=oNA
+   SB oBSTOP2
+   JS#OPTO(iFBSTP2,1,TIME,1204)
+   JS#OPTO(iRBSTP2,1,TIME,1205)
+EN
+
+REM----------------------------------
+REM  Board Stop 2 Off
+REM----------------------------------
+#ST2OF
+   JP#NOOP,oBSTOP2=oNA
+   CB oBSTOP2
+   JS#OPTO(iFBSTP2,0,TIME,1206)
+   JS#OPTO(iRBSTP2,0,TIME,1207)
+EN
+
+REM ===============================================
+REM  Miscellaneous Routines
+REM ===============================================
+REM----------------------------------
+REM  Burn Variables
+REM----------------------------------
+#BURN
+   BURN=1
+;' Need to let other threads have a chance to see this flag change
+   WT750
+   BV;DGERR_TM=TIME
+   BURN=0
+EN
+REM----------------------------------
+REM  Clear Remote I/O Outputs
+REM----------------------------------
+#CLR_RMT
+   INDX=0
+#CLR_RM1
+   JP#NOOP,((INDX+7000)>7049)
+   OB (INDX+7000),IO_STATE[INDX]
+   INDX=INDX+1
+   JP#CLR_RM1
+
+REM----------------------------------
+REM  All Threads No Operation
+REM----------------------------------
+#NOOP;EN
+
+REM ============================================
+REM     Library Begin/End Message Routine
+REM ________________________________________
+REM Arguments:
+REM             ^a = Library Tag (String)
+REM             ^b = Code (Integer)
+REM ============================================
+#MSG_BEG
+   JP#MSG_BEG,(IN_MSG=1);IN_MSG=1
+   MG{EH}{N},{^02},"<",{S}^a,">",{F4.0}^b,"|"
+EN
+
+#MSG_END
+   MG{EH}{^03};IN_MSG=0
+EN
+
+REM ==============================================
+REM     Begin/End Vision Message Routines
+REM ==============================================
+#VIS_BEG
+   JP#VIS_BEG,(IN_MSG=1);IN_MSG=1
+   vACK=0;MG{EH}{N}{^02},"<VIS>",{F4.0}^a,"|"
+EN
+
+REM ==============================================
+REM     Begin System Message Routines
+REM ==============================================
+#SYS_BEG
+   JP#SYS_BEG,(IN_MSG=1);IN_MSG=1
+   vACK=0;MG{EH}{N},{^02},"<SYS>"
+EN
+
+REM =============================================================
+REM        Begin Log Message Routine
+REM =============================================================
+REM Arguments:
+REM _____________________________________________________________
+REM             ^a = Log File Tag (String)
+REM
+REM  NOTE: Accepted log file tags are as follows:
+REM        "LOG" (Most Common), "LG0", "LG1", "LG2", "LG3",
+REM        "LG4", "LG5", "LG6", "LG7", "LG8", "LG9"
+REM =============================================================
+#LOG_BEG
+   JP#LOG_BEG,(IN_MSG=1);IN_MSG=1
+   vACK=0;MG{EH}{N}{^02},"<",{S}^a,">"
+EN
+
+REM =============================================================
+REM  New Column Logging Routine
+REM =============================================================
+#LOG_COL
+   IN_MSG=1;MG{EH}{N}{^09}
+EN
+
+REM =============================================================
+REM  Dynamic Length String Logging Routine
+REM =============================================================
+REM Arguments:
+REM _____________________________________________________________
+REM             ^a = Number of String Arguments (Integer)
+REM             ^b = First 6 Characters (String)
+REM             ^c = Second 6 Characters (String)
+REM             ^d = Third 6 Characters (String)
+REM             ^e = Fourth 6 Characters (String)
+REM             ^f = Fifth 6 Characters (String)
+REM             ^g = Sixth 6 Characters (String)
+REM             ^h = Seventh 6 Characters (String)
+REM
+REM  NOTE: If more than 7 sets of 6 characters need to be logged
+REM        then an array needs to be used and the #LOG_ARR
+REM        routine called with that array.
+REM =============================================================
+#LOG_STR
+   IN_MSG=1
+   IF((@INT[^a]=0)|(^b=""))
+      MG{EH}{N},"-";JP#NOOP
+   ENDIF
+   IF(@INT[^a]=1)
+      MG{EH}{N},{S}^b;JP#NOOP
+   ENDIF
+   IF(@INT[^a]=2)
+      MG{EH}{N},{S}^b,^c;JP#NOOP
+   ENDIF
+   IF(@INT[^a]=3)
+      MG{EH}{N},{S}^b,^c,^d;JP#NOOP
+   ENDIF
+   IF(@INT[^a]=4)
+      MG{EH}{N},{S}^b,^c,^d,^e;JP#NOOP
+   ENDIF
+   IF(@INT[^a]=5)
+      MG{EH}{N},{S}^b,^c,^d,^e,^f;JP#NOOP
+   ENDIF
+   IF(@INT[^a]=6)
+      MG{EH}{N},{S}^b,^c,^d,^e,^f,^g;JP#NOOP
+   ENDIF
+   IF(@INT[^a]=7)
+      MG{EH}{N},{S}^b,^c,^d,^e,^f,^g,^h;JP#NOOP
+   ENDIF
+EN
+
+REM =============================================================
+REM  Array Logging Routine
+REM =============================================================
+REM Arguments:
+REM _____________________________________________________________
+REM             ^a = Name of Array (String)
+REM                - Limited to 6 Characters
+REM             ^b = Index to Start At (Integer)
+REM             ^c = Number of Array Elements to Log (Integer)
+REM
+REM  NOTE: Passing in ^a[-1] (the size of the array) as
+REM        parameter ^c will not cause a command error if ^b
+REM        is greater than 0, even though ^c is now a larger
+REM        number than the number of array elements left in ^a[]
+REM        that can be logged. Instead, the routine will log the
+REM        remainder of array ^a[] and exit.
+REM =============================================================
+#LOG_ARR
+   IN_MSG=1
+   ^b=@INT[^b]
+   ^c=@INT[^c]
+   MG{EH}{N},{S}^a[^b]
+   ^b=^b+1
+   ^c=^c-1
+   JP#LOG_ARR,((^c>0)&(^b<^a[-1]))
+EN
+
+REM =============================================================
+REM  Integer Logging Routine
+REM =============================================================
+REM Arguments:
+REM _____________________________________________________________
+REM             ^a = Number (Integer)
+REM
+REM  NOTE: Messages are automatically formatted for up to 10
+REM        digits to the left of the decimal point. Extra
+REM        zeros preceeding a digit are automatically truncated.
+REM =============================================================
+#LOG_INT
+   IN_MSG=1;MG{EH}{N},{Z10.0}^a
+EN
+
+REM =============================================================
+REM  Decimal Logging Routine
+REM =============================================================
+REM Arguments:
+REM _____________________________________________________________
+REM             ^a = Number of Decimal Places (Integer)
+REM             ^b = Number (Decimal)
+REM
+REM  NOTE: Messages are automatically formatted for up to 10
+REM        digits to the left of the decimal point. Extra
+REM        zeros preceeding a digit are automatically truncated.
+REM =============================================================
+#LOG_DEC
+   IN_MSG=1
+   IF(@INT[^a]=1)
+      MG{EH}{N},{Z10.1}^b
+   ENDIF
+   IF(@INT[^a]=2)
+      MG{EH}{N},{Z10.2}^b
+   ENDIF
+   IF(@INT[^a]=3)
+      MG{EH}{N},{Z10.3}^b
+   ENDIF
+   IF(@INT[^a]=4)
+      MG{EH}{N},{Z10.4}^b
+   ENDIF
+EN
+
+REM ==============================================
+REM     End Log/System/Vision Message Routines
+REM ==============================================
+#VIS_END
+#SYS_END
+#LOG_END
+   MG{EH}{^03};JS#WT_ACK;IN_MSG=0
+EN
+
+REM =============================================================
+REM  Array Mirroring Routine
+REM =============================================================
+REM Arguments:
+REM _____________________________________________________________
+REM             ^a = Name of Array Being Mirrored (String)
+REM                - Limited to 6 Characters
+REM             ^b = Index to Start at on ^a[] (Integer)
+REM             ^c = Name of Array Being Overwritten (String)
+REM                - Limited to 6 Characters
+REM             ^d = Index to Start at on ^c[] (Integer)
+REM             ^e = Number of Array Elements to Mirror (Integer)
+REM
+REM  NOTE: Passing in ^a[-1] or ^c[-1] (the size of an array)
+REM        as parameter ^e will not cause a command error if
+REM        parameters ^a or ^d are greater than 0, even though
+REM        if ^a or ^d are greater than 0, the number of array
+REM        elements left in ^a[] or ^c[] to pull from or write
+REM        to will be less than ^e. Instead, the routine will
+REM        exit out early when it hits the array size of either
+REM        array ^b[] or ^d[].
+REM =============================================================
+#ARR_MIR
+   ^b=@INT[^b]
+   ^d=@INT[^d]
+   ^e=@INT[^e]
+   ^c[^b]=^a[^d]
+   ^b=^b+1
+   ^d=^d+1
+   ^e=^e-1
+   JP#ARR_MIR,((^e>0)&(^b<^a[-1])&(^d<^c[-1]))
+EN
+
+REM =============================================================
+REM  Array Reset Routine
+REM ============================================================
+REM Arguments:
+REM _____________________________________________________________
+REM             ^a = Name of Array Being Reset
+REM                - Limited to 6 Characters
+REM             ^b = Index to Start at on ^a[]
+REM             ^c = Number of Array Elements to Overwrite
+REM             ^d = Value Copied to (^a[^b] -> ^a[^b+(^c-1)])
+REM
+REM  NOTE: Passing in ^a[-1] (the size of the array) as
+REM        parameter ^c will not cause a command error if
+REM        parameter ^b is greater than 0, even though the
+REM        number of array elements left in ^a[] to overwrite
+REM        will be less than ^c. Instead, the routine will
+REM        exit out early after overwriting the last element of
+REM        ^a[] with ^d.
+REM =============================================================
+#ARR_RST
+   ^b=@INT[^b]
+   ^c=@INT[^c]
+   ^a[^b]=^d
+   ^b=^b+1
+   ^c=^c-1
+   JP#ARR_RST,((^c>0)&(^b<^a[-1]))
+EN
+
+REM----------------------------------
+REM  Auto Purge Timer Reset
+REM----------------------------------
+#APRS;AP_TP=TIME;EN
+
+REM ===============================================
+REM  Integrated Vision Routines
+REM ===============================================
+REM =================================
+REM  Vision Inspect Sequences
+REM =================================
+REM----------------------------------
+REM  Select Inspection
+REM----------------------------------
+#INSPCT0
+   JP#NOOP,(FID_EN=0)
+   cVIS=NULL
+   JS#VS_SELI
+EN
+
+REM----------------------------------
+REM  Run Inspection
+REM----------------------------------
+#INSPCT1;
+   JP#NOOP,(FID_EN=0)
+
+   JS#W_CVIS
+   cVIS=NULL
+
+   JS#CK_LGHT
+   JS#CK_VPRO
+   JS#CK_VSOP
+
+   JS#VS_LON
+
+   JS#VS_FWDS
+   JS#VS_LIVE
+   vSYSPG=VSWIND
+
+   vAUTOMSG=3010
+
+   'Wait for Motion to Settle
+   JS#VS_STL
+
+
+REM  Clear X & Y Offset if FID A
+   IF (VIS_OP = 0)
+      JS#SK_CLR
+   ENDIF
+
+REM  Store Original FID Coordinates
+   IF (VIS_OP = 0)
+      FDA_COR[0]=(_TPX)
+      FDA_COR[1]=(_TPY)
+   ENDIF
+
+   IF (VIS_OP = 1)
+      FDB_COR[0]=(_TPX)
+      FDB_COR[1]=(_TPY)
+   ENDIF
+
+   JS#VS_MAN,(vPAGE=1)
+   JS#VS_AUTO,(vPAGE=3)
+
+REM  Set Skew Angle
+   IF (VIS_OP = 1)
+      JS#SK_ANG
+      vFIDRUN=1
+      vTOOL=0
+      JS#SK_XY
+   ENDIF
+
+REM  Update System Messages
+   IF (VIS_OP = 1)
+      IF (vPAGE=3)
+         JS#A2003
+      ENDIF
+
+      IF (vPAGE=1)
+         JS#V404
+         JS#V407
+      ENDIF
+   ENDIF
+
+   JS#VS_LOF
+
+   vSYSPG=0
+EN
+
+REM----------------------------------
+REM  Manual Inspection Seq
+REM----------------------------------
+#VS_MAN
+   JS#V400
+   JS#V402
+
+   cVIS=NULL
+
+   JS#VS_RUNI
+   JS#W_CVIS
+
+REM  Enable Cross Hair if FID A and Fail
+   IF ((VIS_OP=0) & (cVIS <> vsPASS))
+      JS#VS_CHEN
+   ENDIF
+
+REM  Enable Fid Window if FID B and Fail
+   IF ((VIS_OP=1) & (cVIS <> vsPASS))
+      JS#VS_FWEN
+   ENDIF
+
+   JS#VS_ALRT
+
+REM  Apply Offsets & Calculate Fid Locations
+   IF (VIS_OP=0)
+      GX=(CX*CNT_MM)
+      GY=(CY*CNT_MM)
+      FDA_ACT[0]=(_TPX+(CX*CNT_MM))
+      FDA_ACT[1]=(_TPY+(CY*CNT_MM))
+   ELSE
+      FDB_ACT[0]=(_TPX+(CX*CNT_MM))
+      FDB_ACT[1]=(_TPY+(CY*CNT_MM))
+   ENDIF
+
+   JS#V403
+   JS#V401
+
+   vSYSPG=0
+   JP#VS_STK,(cVIS <> vsPASS)
+EN
+
+REM----------------------------------
+REM  Auto Inspection Seq
+REM----------------------------------
+#VS_AUTO
+   R_CNT=1
+   JS#VS_LON
+
+REM  Inspection Retry Loop
+#RT_LP
+
+REM  Wait 500ms Between Retries
+   IF (R_CNT>1)
+      WT(500*ms)
+   ENDIF
+
+   cVIS=NULL
+   JS#VS_RUNI
+   JS#W_CVIS
+
+REM  Scale FID A Camera Offset
+   IF ((cVIS = vsPASS) & (VIS_OP=0))
+      cxOFF=(CX*CNT_MM)
+      cyOFF=(CY*CNT_MM)
+   ENDIF
+
+   JP#VS_FAIL,((R_CNT>=vsR_MAX)&(cVIS <> vsPASS))
+   R_CNT=R_CNT + 1
+
+   JP#RT_LP,(cVIS <> vsPASS)
+
+REM  Calculate Global Offset Based On FID A
+   IF (VIS_OP=0)
+      GX=@ABS[(_TPX-FDA_COR[0])]
+      GY=@ABS[(_TPY-FDA_COR[1])]
+
+      IF (_TPX<FDA_COR[0])
+         GX=(GX*-1)
+      ENDIF
+      IF (_TPY<FDA_COR[1])
+         GY=(GY*-1)
+      ENDIF
+
+      GX=GX+cxOFF
+      GY=GY+cyOFF
+   ENDIF
+
+REM  Calculate Fid Locations
+   IF (VIS_OP=0)
+      FDA_ACT[0]=(_TPX+(CX*CNT_MM))
+      FDA_ACT[1]=(_TPY+(CY*CNT_MM))
+   ELSE
+      FDB_ACT[0]=(_TPX+(CX*CNT_MM))
+      FDB_ACT[1]=(_TPY+(CY*CNT_MM))
+   ENDIF
+
+   JS#V403
+
+   JS#A2003
+EN
+
+REM----------------------------------
+REM  Process Failed Inspection
+REM----------------------------------
+#VS_FAIL
+
+   vSYSPG=VSWIND
+   bAUTO[1]=0
+   vAUTOVIS="210"
+
+   JS#VS_CHEN,(VIS_OP=0)
+   JS#VS_FWEN,(VIS_OP=1)
+
+   IF (cVIS=-1);vAUTOMSG=3000;ENDIF
+   IF (cVIS=-2);vAUTOMSG=3001;ENDIF
+   IF (cVIS=-3);vAUTOMSG=3002;ENDIF
+   IF (cVIS=-4);vAUTOMSG=3003;ENDIF
+   IF (cVIS=-5);vAUTOMSG=3006;ENDIF
+
+   JS#V403
+   JS#VS_ALRT
+   vSYSPG=0
+
+REM --- Wait for Retry Selection ---
+#VS_FLP
+   JP#VS_FLP,(bAUTO[1]=0)
+
+   bAUTO[1]=0
+
+   JP#VS_EXP,lstAUTO=1
+   JP#VS_RTRY,lstAUTO=2
+   JP#VS_ALGN,lstAUTO=3
+   JP#VS_FOV,lstAUTO=4
+   JP#VS_SKIP,lstAUTO=5
+   JP#VS_CNCL,lstAUTO=6
+EN
+
+REM--------------------
+REM  Use Expected POS
+REM--------------------
+#VS_EXP
+   vAUTOVIS="000"
+   bAUTO[1]=0
+   JS#SK_CLR
+   JS#A2003
+   JS#VS_CHDS
+EN
+
+REM--------------------
+REM  Man Retry
+REM--------------------
+#VS_RTRY
+   WT(500*ms)
+   bAUTO[1]=0
+   JS#VS_LIVE
+
+   vAUTOVIS="010"
+   vAUTOMSG=3009
+
+   vSYSPG=0
+
+#RTRY_LP
+   JP#RTRY_LP,bAUTO[1]=0
+
+   bAUTO[1]=0
+   vAUTOVIS="000"
+   vAUTOMSG=3010
+   JS#VS_CHDS
+   JP#VS_AUTO
+EN
+
+REM--------------------
+REM  Man Align
+REM--------------------
+#VS_ALGN
+   WT(500*ms)
+   bAUTO[1]=0
+
+   JS#VS_LIVE
+   JS#VS_CHEN
+
+   vAUTOVIS="010"
+   vAUTOMSG=3004
+
+   JS#SAVE_SP
+
+   TB_SPD=2
+   SB oTB_RLED
+   HX2
+   XQ#TB_XY,2
+   vSYSPG=0
+
+   CAXIS=1
+
+REM --- Wait fOR 'GO' Button ---
+#ALGN_LP
+   JS#RM_TCH,(@IN[iAXIS]=0)
+   JP#ALGN_LP,((bAUTO[1]=0)&(@IN[iTEACH]))
+
+REM  Calculate Global Offset Based On FID A
+   IF (VIS_OP=0)
+      GX=@ABS[(_TPX-FDA_COR[0])]
+      GY=@ABS[(_TPY-FDA_COR[1])]
+
+      IF (_TPX<FDA_COR[0])
+         GX=(GX*-1)
+      ENDIF
+      IF (_TPY<FDA_COR[1])
+         GY=(GY*-1)
+      ENDIF
+   ENDIF
+
+REM  Calculate Fid Locations
+   IF (VIS_OP=0)
+      FDA_ACT[0]=(_TPX)
+      FDA_ACT[1]=(_TPY)
+   ELSE
+      FDB_ACT[0]=(_TPX)
+      FDB_ACT[1]=(_TPY)
+   ENDIF
+
+   bAUTO[1]=0
+   HX2
+   IF (AXES=4)
+      STXYZW;AMXYZW
+   ELSE
+      STXYZ;AMXYZ
+   ENDIF
+
+   JS#LED_RS
+   JS#TUNE
+
+   vAUTOVIS="000"
+   JS#A2003
+   JS#VS_CHDS
+   JS#REST_SP
+EN
+
+REM--------------------
+REM  Man FOV
+REM--------------------
+#VS_FOV
+   WT(250*ms)
+   bAUTO[1]=0
+
+   JS#VS_LIVE
+   JS#VS_CHEN
+
+   vAUTOVIS="010"
+   vAUTOMSG=3004
+
+   JS#SAVE_SP
+
+   TB_SPD=2
+   SB oTB_RLED
+   HX2
+   XQ#TB_XY,2
+   vSYSPG=0
+
+   CAXIS=1
+
+REM --- Wait for 'GO' Button ---
+#FOV_LP
+   JS#RM_TCH,(@IN[iAXIS]=0)
+   JP#FOV_LP,((bAUTO[1]=0)&(@IN[iTEACH]))
+
+   bAUTO[1]=0
+   HX2
+
+   IF (AXES=4)
+      STXYZW;AMXYZW
+   ELSE
+      STXYZ;AMXYZ
+   ENDIF
+
+   JS#LED_RS
+   JS#TUNE
+
+   vAUTOVIS="000"
+   vAUTOMSG=3010
+
+   JS#VS_CHDS
+   JS#REST_SP
+   JP#VS_AUTO
+EN
+
+REM--------------------
+REM  Skip Inspect
+REM--------------------
+#VS_SKIP
+   bAUTO[1]=0
+   vAUTOVIS="000"
+   JS#SK_CLR
+   JS#A2003
+   JS#VS_CHDS
+   JP#VS_STK
+EN
+
+REM--------------------
+REM  Cancel Inspect
+REM--------------------
+#VS_CNCL
+   bAUTO[1]=0
+   vAUTOVIS="000"
+   JS#SK_CLR
+   JS#VS_CHDS
+   ZS
+   JS#SAFEZ
+   JS#ALLUP
+   JP#AC_END
+EN
+
+REM =================================
+REM  Light On/Off Sequence
+REM =================================
+REM----------------------------------
+REM  Group Light Routines
+REM----------------------------------
+REM--------------------
+REM  Light On
+REM--------------------
+#VS_LON
+   IF (LIGHT=0)
+      JS#VS_L1OF
+      JS#VS_L2OF
+      JS#VS_L3OF
+      JP#NOOP
+   ENDIF
+
+   IF (LIGHT=1)
+      JS#VS_L1ON
+      JS#VS_L2OF
+      JS#VS_L3OF
+      JP#NOOP
+   ENDIF
+
+   IF (LIGHT=2)
+      JS#VS_L1OF
+      JS#VS_L2ON
+      JS#VS_L3OF
+      JP#NOOP
+   ENDIF
+
+   IF (LIGHT=3)
+      JS#VS_L1OF
+      JS#VS_L2OF
+      JS#VS_L3ON
+      JP#NOOP
+   ENDIF
+EN
+
+REM--------------------
+REM  Light Off
+REM--------------------
+#VS_LOF
+   IF (VSL_EN=1)
+      JS#VS_L1ON
+      JS#VS_L2ON,WHL_EN
+      JS#VS_L3ON,BLK_EN
+      JS#VS_L2OF,WHL_EN=0
+      JS#VS_L3OF,BLK_EN=0
+
+      JS#VS_LIVE
+      JS#VS_CHEN
+   ELSE
+      JS#VS_L1OF
+      JS#VS_L2ON,WHL_EN
+      JS#VS_L3ON,BLK_EN
+      JS#VS_L2OF,WHL_EN=0
+      JS#VS_L3OF,BLK_EN=0
+   ENDIF
+EN
+
+REM----------------------------------
+REM  Individual Light Routines
+REM----------------------------------
+REM--------------------
+REM  Fid Light
+REM--------------------
+#VS_L1ON
+   IF(oFIDLT<>oNA)
+      SB oFIDLT
+      vLGHT[1]=1
+      WT(25*ms)
+   ENDIF
+EN
+
+#VS_L1OF
+   IF(oFIDLT<>oNA)
+      CB oFIDLT
+      vLGHT[1]=0
+      WT(25*ms)
+   ENDIF
+EN
+
+REM--------------------
+REM  House Light
+REM--------------------
+#VS_L2ON
+   IF(oHSELT<>oNA)
+      SB oHSELT
+      vLGHT[2]=0
+   ENDIF
+EN
+
+#VS_L2OF
+   IF(oHSELT<>oNA)
+      CB oHSELT
+      vLGHT[2]=0
+   ENDIF
+EN
+
+REM--------------------
+REM  Black Light
+REM--------------------
+#VS_L3ON
+   IF(oBLKLT<>oNA)
+      SB oBLKLT
+      vLGHT[3]=0
+   ENDIF
+EN
+
+#VS_L3OF
+   IF(oBLKLT<>oNA)
+      CB oBLKLT
+      vLGHT[3]=0
+   ENDIF
+EN
+
+REM ===============================================
+REM  Vision Init Routines
+REM ===============================================
+REM =================================
+REM  Vision Var / Conts / Arr
+REM =================================
+#VS_INIT
+
+REM -----------------------
+REM  Vision
+REM -----------------------
+   DM FDA_COR[3],FDB_COR[3],vLGHT[4],LAST[4]
+   DM ANGLE[3]
+   DM FDA_ACT[3],FDB_ACT[3]
+
+   FDA_COR[0]=0;FDA_COR[1]=0;FDA_COR[2]=0
+   FDB_COR[0]=0;FDB_COR[1]=0;FDB_COR[2]=0
+
+   VSWIND=0
+   NULL=-99
+   CNT_MM=200
+
+   vsPASS=1
+   vsR_MAX=3
+
+   VIS_ERR=NULL
+
+   LIGHT=NULL
+   VIS_PROG=NULL
+   VIS_OP=NULL
+
+   cVIS=NULL
+   cPING=NULL
+
+   GX=0;GY=0;GZ=0;GW=0
+   CX=0;CY=0
+
+   vLGHT[1]=0
+   vLGHT[2]=0
+   vLGHT[3]=0
+
+REM ------------
+REM  Skew
+REM ------------
+   vFIDRUN=0
+   vTOOL=0
+   vANGLE=0
+   vPARAM=0
+   vFUNC=-99
+   vsA_MAX=50
+
+REM ------------
+REM  Batch Fids
+REM ------------
+   Batch_sz=25
+   DM tANGLE[Batch_sz]
+   DM tORIG_X[Batch_sz],tORIG_Y[Batch_sz]
+   DM tGX[Batch_sz],tGY[Batch_sz]
+EN
+
+REM ===============================================
+REM  Vision Functions
+REM ===============================================
+
+REM ----------------------
+REM  Alert Results
+REM ----------------------
+#VS_ALRT
+   IF (cVIS<>vsPASS)
+      JS#VS_LOG
+      SB oALM
+      WT(1000*ms)
+      CB oALM
+   ENDIF
+EN
+
+REM ----------------------
+REM POP Stack Down To 1 Element
+REM ----------------------
+#VS_STK
+   ZS1
+   JP#VS_STK,(_ZS1<>1)
+EN
+
+REM ----------------------
+REM  Log Inspection Image
+REM ----------------------
+#VS_LOG
+   JS#VIS_BEG(2001)
+   JS#VIS_END
+EN
+
+REM ----------------------
+REM  Ping VBAI
+REM ----------------------
+#VS_PING
+   JS#VIS_BEG(3001)
+   JS#VIS_END
+EN
+
+REM ----------------------
+REM  Snap Image
+REM ----------------------
+#VS_SNAP
+   JS#VIS_BEG(3010)
+   JS#VIS_END
+EN
+
+REM ----------------------
+REM  Image Go Live
+REM ----------------------
+#VS_LIVE
+   JS#VIS_BEG(3011)
+   JS#VIS_END
+EN
+
+REM ----------------------
+REM  Enable Crosshair
+REM ----------------------
+#VS_CHEN
+   JS#VIS_BEG(3020)
+   JS#VIS_END
+EN
+
+REM ----------------------
+REM  Disable Crosshair
+REM ----------------------
+#VS_CHDS
+   JS#VIS_BEG(3021)
+   JS#VIS_END
+EN
+
+REM ----------------------
+REM  Enable Fid Window
+REM ----------------------
+#VS_FWEN
+   WT(750*ms)
+   JS#VIS_BEG(3030)
+   JS#VIS_END
+EN
+
+REM ----------------------
+REM  Disable Fid Window
+REM ----------------------
+#VS_FWDS
+   JS#VIS_BEG(3031)
+   JS#VIS_END
+EN
+
+REM ----------------------
+REM  Select Inspection
+REM ----------------------
+#VS_SELI
+   JS#VIS_BEG(5003)
+   MG{EH}{N},VIS_PROG,",",VIS_OP
+   JS#VIS_END
+EN
+
+REM ----------------------
+REM  Run Inspection
+REM ----------------------
+#VS_RUNI
+   JS#VIS_BEG(5005)
+   MG{EH}{N},VIS_PROG,",",VIS_OP
+   JS#VIS_END
+EN
+
+REM ------------------------------------
+REM  Update Tool Offsets (PMInterface)
+REM ------------------------------------
+#VS_TOFF
+   JS#MSG_BEG("GEN",9000)
+   JS#MSG_END
+EN
+
+REM ===============================================
+REM  Vision Handshake Routines
+REM ===============================================
+REM -----------------------
+REM  Wait for cVIS (Portal)
+REM -----------------------
+#W_CVIS
+   vTIME=TIME
+   veTYPE=1500
+
+#CVIS_LP
+
+   JP#VIS_ER,(TIME-vTIME)>30000
+   JP#CVIS_LP,cVIS=NULL
+
+   IF (cVIS = -6)
+      veTYPE=1501
+      JP#VIS_ER
+   ENDIF
+
+   IF (cVIS = -7)
+      veTYPE=1505
+      JP#VIS_ER
+   ENDIF
+
+   IF (cVIS = -8)
+      veTYPE=1506
+      JP#VIS_ER
+   ENDIF
+EN
+
+REM -----------------------
+REM  Wait for cPING (Portal)
+REM -----------------------
+#W_CPING
+   JP#NOOP,(cPING <> NULL)
+   vTIME=TIME
+   veTYPE=1500
+#CPNG_LP
+   JP#NOOP,vCSTOP=1
+   JP#VIS_ER,(TIME-vTIME)>30000
+   JP#CPNG_LP,cPING=NULL
+EN
+
+REM -----------------------
+REM  Wait for VBAI Engine
+REM -----------------------
+#W_VBAI
+   cPING = NULL
+   JS#VS_PING
+   WT(100*ms)
+
+   IF (cPING = NULL)
+
+      IF (vPAGE=3)
+         vAUTOMSG=3005
+      ELSE
+         JS#V405
+         SB oALM
+         WT(500*ms)
+         CB oALM
+      ENDIF
+
+      JS#W_CPING
+   ENDIF
+
+   'If Stop Button Exit Auto
+   IF ((cPING = NULL) & (vPAGE = 3))
+      ZS1
+      JP#AC_END
+   ENDIF
+EN
+
+REM ===============================================
+REM  Vision Check Error Routines
+REM ===============================================
+
+REM -----------------------
+REM  Validate LIGHT (PM)
+REM -----------------------
+#CK_LGHT
+   IF ((LIGHT<0) | (LIGHT>99))
+      veTYPE=1502
+      JP#VIS_ER
+   ENDIF
+EN
+
+REM -----------------------
+REM  Validate VIS_PROG (PM)
+REM -----------------------
+#CK_VPRO
+   IF (VIS_PROG<0)
+      veTYPE=1503
+      JP#VIS_ER
+   ENDIF
+EN
+
+REM -----------------------
+REM  Validate VIS_OP (PM)
+REM -----------------------
+#CK_VSOP
+   IF ((VIS_OP<0) | (VIS_OP>2))
+      veTYPE=1504
+      JP#VIS_ER
+   ENDIF
+EN
+
+REM -----------------------
+REM  Validate Angle In Range
+REM -----------------------
+#CK_ANG
+   tANGLE=@ABS[vsA_MAX]
+   IF ((@ABS[vANGLE])>tANGLE)
+      veTYPE=1507
+      JP#VIS_ER
+   ENDIF
+EN
+
+REM -----------------------
+REM  Throw Vision Err
+REM -----------------------
+#VIS_ER
+   VIS_ERR=veTYPE
+   JP#VIS_ER
+EN
+
+REM ===============================================
+REM  Vision System Messages
+REM ===============================================
+#V400
+   JS#SYS_BEG
+   MG {EH}{N},"-------- Begin Inspection --------"
+   JS#SYS_END
+EN
+
+#V401
+   JS#SYS_BEG
+   MG {EH}{N},"--------- End Inspection ---------"
+   JS#SYS_END
+EN
+
+#V402
+   IF (VIS_OP=0);T="FID A";ENDIF
+   IF (VIS_OP=1);T="FID B";ENDIF
+   IF (VIS_OP=2);T="INSPCT";ENDIF
+
+   JS#SYS_BEG
+   MG {EH},"Prog #:",{F2.0}VIS_PROG,{^03}
+   MG {EH}{^02},"Light:",{F2.0}LIGHT,{^03}
+   MG {EH}{^02}{N},"TYPE: ",{S}T
+   JS#SYS_END
+EN
+
+#V403
+   IF (cVIS=vsPASS);T="Pass";ENDIF
+   IF (cVIS<>vsPASS);T="Fail";ENDIF
+
+   IF (cVIS=-5)
+      JS#SYS_BEG
+      MG {EH}{N},"Close Inspection!"
+      JS#SYS_END
+   ELSE
+      JS#SYS_BEG
+      MG {EH}{N},"Inspection Result: ",T{S}
+      JS#SYS_END
+   ENDIF
+EN
+
+#V404
+   JS#SYS_BEG
+   MG {EH}{N},"XOffset =",{F4.2}GX,{^03}
+   MG {EH}{^02},"YOffset =",{F4.2}GY
+   JS#SYS_END
+EN
+
+#V405
+   JS#SYS_BEG
+   MG {EH}{N},"Initializing Vision Engine, Please Wait..........."
+   JS#SYS_END
+EN
+
+#V407
+   JS#SYS_BEG
+   MG {EH}{N},"Skew =",{F2.1}vANGLE
+   JS#SYS_END
+EN
+
+REM ===============================================
+REM  Skew Functions
+REM ===============================================
+#SK_XY
+   JP#NOOP,vFIDRUN=0
+
+   LDX=1
+   LDY=1
+
+   SX0
+   OK 0
+   SJ 0
+   SO 0,0
+
+   ORIGINX=FDA_ACT[0]
+   ORIGINY=FDA_ACT[1]
+
+   SJ (vANGLE*-1)
+   SR (ORIGINX-TOOLX[vTOOL]),(ORIGINY-TOOLY[vTOOL])
+   SX2
+   SHXYZ
+   IF(AXES=4);SHW;ENDIF
+EN
+
+REM -------------------------------------------------
+REM  Skew Angle Calculations
+REM -------------------------------------------------
+#SK_ANG
+
+REM ----------------
+REM  Expected Angle
+REM ----------------
+   DELTAX1=((FDB_COR[0])-(FDA_ACT[0]))
+   DELTAY1=((FDB_COR[1])-(FDA_ACT[1]))
+
+REM --------------------------------------
+REM  Special Cases (DeltaX=0, DeltaY=0)
+REM --------------------------------------
+   IF ((DELTAX1=0)|(DELTAY1=0))
+      IF (DELTAX1=0)
+         ANGLE[1]=0
+      ELSE
+         ANGLE[1]=90
+      ENDIF
+   ELSE
+      DELTA1=(DELTAY1/DELTAX1)
+      ANGLE[1]=(@ATAN[DELTA1])
+   ENDIF
+
+REM ----------------
+REM  Actual Angle
+REM ----------------
+   DELTAX2=((FDB_ACT[0])-(FDA_ACT[0]))
+   DELTAY2=((FDB_ACT[1])-(FDA_ACT[1]))
+
+REM --------------------------------------
+REM  Special Cases (DeltaX=0, DeltaY=0)
+REM --------------------------------------
+   IF ((DELTAX2=0)|(DELTAY2=0))
+      IF (DELTAX2=0)
+         ANGLE[2]=0
+      ELSE
+         ANGLE[2]=90
+      ENDIF
+   ELSE
+      DELTA2=(DELTAY2/DELTAX2)
+      ANGLE[2]=(@ATAN[DELTA2])
+   ENDIF
+
+   vANGLE=(ANGLE[1]-ANGLE[2])
+
+REM --------------------------------------
+REM  Special Cases (Quadrant Change)
+REM --------------------------------------
+   IF ((vANGLE < 0) & ((@ABS[vANGLE]) >= 90))
+      vANGLE = (vANGLE + 180)
+   ENDIF
+
+   IF ((vANGLE > 0) & ((@ABS[vANGLE]) >= 90))
+      vANGLE = (vANGLE - 180)
+   ENDIF
+
+   JS#CK_ANG
+EN
+
+REM -------------------------------------------------
+REM  Skew Clear
+REM -------------------------------------------------
+#SK_CLR
+   JP#NOOP,NO_VIS=1
+   vFIDRUN=0
+   vANGLE=0
+   GX=0
+   GY=0
+   cxOFF=0
+   cyOFF=0
+
+   JP#NOOP,(_SX=0)
+   SX0
+   OK 0
+   SJ 0
+   SO 0,0
+EN
+
+REM -------------------------------------------------
+REM  Fiducial Settling Routine
+REM -------------------------------------------------
+#VS_STL
+   MAX_STL=20
+   veTYPE=1508
+   vTIME=TIME
+
+#VS_SLP
+   XERR=@ABS[_TEX]
+   YERR=@ABS[_TEY]
+   JP#VIS_ER,(TIME-vTIME)>3000
+   JP#VS_SLP,((XERR>MAX_STL)|(YERR>MAX_STL))
+EN
+
+
+REM ===============================================
+REM  PM Skew Handshake Functions
+REM ===============================================
+
+REM -------------------------------------------------
+REM  Tool Functions - Manual Mode
+REM -------------------------------------------------
+#MA_TOOL
+   IF(NO_VIS=1);vFUNC=0;ENDIF
+   vPARAM=0
+   JP#NOOP,NO_VIS=1
+   HX2
+   STXYZ;AMXYZ
+   IF(AXES=4);STW;AMW;ENDIF
+   WT(100*ms)
+
+   IF (vFUNC=1)
+      JS#CK_ANG
+      JS#SK_XY
+      vFUNC=NULL
+   ENDIF
+
+   IF (vFUNC=2)
+      JS#SK_CLR
+      vFUNC=NULL
+   ENDIF
+
+   IF (vFUNC=4)
+      JS#PR_MN
+      vFUNC=NULL
+   ENDIF
+
+   IF (vFUNC=5)
+      JS#MA_THTA
+      vFUNC=NULL
+   ENDIF
+
+   IF ((vFUNC=6)&(AXES=4))
+      tAXES=3
+      vTOOL=0
+      JS#MA_THTA
+      vFUNC=NULL
+   ENDIF
+
+   IF ((vFUNC=7)&(AXES=4))
+      tAXES=4
+      vTOOL=0
+      JS#MA_THTA
+      vFUNC=NULL
+   ENDIF
+
+   CAXIS=1
+   XQ#TB_XY,2
+
+   vFUNC=NULL
+   vPARAM=0
+EN
+
+REM -------------------------------------------------
+REM  Theta Functions - Manual Mode
+REM -------------------------------------------------
+#MA_THTA
+   JP#NOOP,((AXES=3)|(NO_VIS=1))
+   JP#NOOP,(THTA_EN=0)
+   HX2
+   STXYZ;AMXYZ
+   IF(AXES=4);STW;AMW;ENDIF
+   WT(0*ms)
+
+   SPZ=2000
+   SPW=10000
+
+   JS#ALLUP
+   JS#SAFEZ
+
+  IF ((vFUNC=5)|(vFUNC=6)|(vFUNC=7))
+      tWPOS=(TOOLW[vTOOL] * -1)
+      PAW=tWPOS
+      BGW;AMW
+   ENDIF
+   DRFLAG=0
+EN
+
+REM ===============================================
+REM  Batch Fiducial Functions
+REM ===============================================
+
+REM -----------------------
+REM  Store Fiducial
+REM -----------------------
+#F_STORE
+   tGX[I]=GX
+   tGY[I]=GY
+   tORIG_X[I]=FDA_ACT[0]
+   tORIG_Y[I]=FDA_ACT[1]
+   tANGLE[I]=vANGLE
+   I=I+1
+EN
+
+REM -----------------------
+REM  Recall Fiducial
+REM -----------------------
+#F_RCALL
+   GX=tGX[I]
+   GY=tGY[I]
+   FDA_ACT[0]=tORIG_X[I]
+   FDA_ACT[1]=tORIG_Y[I]
+   vANGLE=tANGLE[I]
+   I=I+1
+EN
+
+REM ------------------------
+REM  Reset Index
+REM -----------------------
+#INDX_RS
+   I=0
+EN
+
+#IDLE
+JP#IDLE
+
+#EOM
+EN
