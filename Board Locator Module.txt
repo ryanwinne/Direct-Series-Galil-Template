@@ -1,0 +1,76 @@
+REM============================Board Locator Module==============================
+REM             Author: Prog Dept   Date: 11/13/2014   Version: 1.03
+REM               ===============================================
+REM                              Revision History
+REM               ===============================================
+REM      Rev: Change:                                     Date:        By:
+REM      ------------------------------------------------------------------
+REM      01 - Modified From Base Module                 ##/##/##       XXX
+REM      ------------------------------------------------------------------
+REM
+REM==============================Initialize I/O==================================
+#LOC_IO
+   iLOC1=7033
+   iLOC2=7034
+   oLOC=7034
+EN
+
+REM============================Initialize Variables==============================
+#LOC_INI
+   vLOC=0
+EN
+
+REM===============================Check Variables================================
+#LOC_CHK
+   INIT=6
+   JP#LOC_RST,LOC_EN<0
+EN
+
+REM===============================Reset Variables================================
+#LOC_RST
+   JS#M4000
+   LOC_EN=0
+   JP#AUTO2
+
+REM===============================Error Checking=================================
+#LOC_SCN
+EN
+
+REM===============================Error Handling=================================
+#LOC_ERR
+EN
+
+REM==============================Module Functions================================
+REM----------------------------------
+REM  Manual Locator Toggle
+REM----------------------------------
+#LOC_MAN
+   JP#LOCON,vLOC=2
+   JP#LOCOF,vLOC=1
+EN
+
+REM----------------------------------
+REM  Locator On
+REM----------------------------------
+#LOCON
+   vLOC=0
+   JP#NOOP,((LOC_EN=0)*ACFLAG)
+   SB oLOC
+   JS#OPTO(iLOC1,1,TIME,1260)
+   JS#OPTO(iLOC2,1,TIME,1261)
+EN
+
+REM----------------------------------
+REM  Locator Off
+REM----------------------------------
+#LOCOF
+   vLOC=0
+   JP#NOOP,((LOC_EN=0)*ACFLAG)
+   CB oLOC
+   JS#OPTO(iLOC1,0,TIME,1262)
+   JS#OPTO(iLOC2,0,TIME,1263)
+EN
+
+REM==============================Module Messages=================================
+
+REM===============================End of Module==================================

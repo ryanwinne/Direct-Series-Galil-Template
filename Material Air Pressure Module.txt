@@ -1,0 +1,210 @@
+REM========================Material Air Pressure Module==========================
+REM             Author: Prog Dept   Date: 11/14/2014   Version: 1.01
+REM               ===============================================
+REM                              Revision History
+REM               ===============================================
+REM      Rev: Change:                                     Date:        By:
+REM      ------------------------------------------------------------------
+REM      01 - Modified From Base Module                 ##/##/##       XXX
+REM      ------------------------------------------------------------------
+REM
+REM==============================Initialize I/O==================================
+#PRS_IO
+   oMATPRS1=oNA
+   oMATPRS2=oNA
+EN
+
+REM============================Initialize Variables==============================
+#PRS_INI
+   PRS_FLG=0
+   PRS_ERR=0
+   PRSTIME=TIME
+EN
+
+REM===============================Check Variables================================
+#PRS_CHK
+   INIT=8
+REM MAT 1   JP#PRS_RST,PRS1_MD<0
+REM MAT 1   JP#PRS_RST,PRS1_EN<0
+REM MAT 1   JP#PRS_RST,PRS1_LO<0
+REM MAT 1   JP#PRS_RST,PRS1_HI<0
+   
+REM MAT 2   JP#PRS_RST,PRS2_MD<0
+REM MAT 2   JP#PRS_RST,PRS2_EN<0
+REM MAT 2   JP#PRS_RST,PRS2_LO<0
+REM MAT 2   JP#PRS_RST,PRS2_HI<0
+   
+EN
+
+REM===============================Reset Variables================================
+#PRS_RST
+   JS#M4000
+REM MAT 1   PRS1_MD=0
+REM MAT 1   PRS1_EN=0
+REM MAT 1   PRS1_LO=10
+REM MAT 1   PRS1_HI=35   
+   
+REM MAT 2   PRS2_MD=0
+REM MAT 2   PRS2_EN=0
+REM MAT 2   PRS2_LO=10
+REM MAT 2   PRS2_HI=35  
+   
+   JP#AUTO2
+
+REM===============================Error Checking=================================
+#PRS_SCN
+   JP#ESTOP,PRS_ERR<>0
+EN
+
+REM===============================Error Handling=================================
+#PRS_ERR
+   MEC=1046;JP#M1046,PRS_ERR<>0
+EN
+
+REM==============================Module Functions================================
+#PRS1_ST
+   INDX=oMATPRS1-7000
+   IO_STATE[INDX]=0
+   JP#NOOP,PRS1_MD<>2
+   IO_STATE[INDX]=1
+EN
+
+#PRS2_ST
+   INDX=oMATPRS2-7000
+   IO_STATE[INDX]=0
+   JP#NOOP,PRS2_MD<>2
+   IO_STATE[INDX]=1
+EN
+
+#PRS_MON
+REM-----------------------------
+REM Material 1 Pressure Monitor
+REM 1-5v High Range (-146 - 145 psi) Material Air Pressure:
+REM MAT 1   LOW_OFF=1.005
+REM MAT 1   HI_OFF=0.074
+REM-----------------------------
+
+REM MAT 1   AN_AVG[4]=(AN_SAMP[4]/S_SIZE)
+REM MAT 1   VDC_OFF=LOW_OFF+((AN_AVG[4]-LOW_OFF)*HI_OFF)
+REM MAT 1   AN_AVG[0]=((AN_AVG[4]-VDC_OFF)*AN_VDC[4])
+REM MAT 1   AN_AVG[0]=(((AN_AVG[0]*10)-(@FRAC[AN_AVG[0]*10]))/10)
+   
+REM MAT 1   IF(@FRAC[@FRAC[AN_AVG[0]/.2]]>.01)
+REM MAT 1      AN_AVG[0]=AN_AVG[0]-.1
+REM MAT 1   ENDIF
+   
+REM MAT 1   IF(AN_AVG[0]<.5)
+REM MAT 1     AN_ACT[4]=0
+REM MAT 1   ELSE
+REM MAT 1      AN_ACT[4]=AN_AVG[0]
+REM MAT 1   ENDIF
+
+REM MAT 1   AN_ERR[4]=(((AN_ACT[4] > PRS1_HI) + (AN_ACT[4] < PRS1_LO)) * PRS1_EN)
+
+REM MAT 1   PRS_FLG=1
+REM MAT 1REM Syringe 1   JS#PRSFLT1,((AN_ERR[4])*(ACFLAG)*(@OUT[oMATPRS1])*(TIME-AN_TM[4]))>AN_TO
+REM MAT 1REM Tank 1   JS#PRSFLT1,((AN_ERR[4])*(ACFLAG))>AN_TO
+
+REM-----------------------------
+REM Material 2 Pressure Monitor
+REM 1-5v High Range (-146 - 145 psi) Material Air Pressure:
+REM MAT 1   LOW_OFF=1.005
+REM MAT 1   HI_OFF=0.074
+REM-----------------------------
+
+REM MAT 2   AN_AVG[5]=(AN_SAMP[5]/S_SIZE)
+REM MAT 2   VDC_OFF=LOW_OFF+((AN_AVG[5]-LOW_OFF)*HI_OFF)
+REM MAT 2   AN_AVG[0]=((AN_AVG[5]-VDC_OFF)*AN_VDC[5])
+REM MAT 2   AN_AVG[0]=(((AN_AVG[0]*10)-(@FRAC[AN_AVG[0]*10]))/10)
+   
+REM MAT 2   IF(@FRAC[@FRAC[AN_AVG[0]/.2]]>.01)
+REM MAT 2      AN_AVG[0]=AN_AVG[0]-.1
+REM MAT 2   ENDIF
+   
+REM MAT 2   IF(AN_AVG[0]<.5)
+REM MAT 2     AN_ACT[5]=0
+REM MAT 2   ELSE
+REM MAT 2      AN_ACT[5]=AN_AVG[0]
+REM MAT 2   ENDIF
+
+REM MAT 2   AN_ERR[5]=(((AN_ACT[5] > PRS2_HI) + (AN_ACT[5] < PRS2_LO)) * PRS2_EN)
+
+REM MAT 2   PRS_FLG=2
+REM MAT 2REM Syringe 1   JS#PRSFLT2,((AN_ERR[5])*(ACFLAG)*(@OUT[oMATPRS2])*(TIME-AN_TM[5]))>AN_TO
+REM MAT 2REM Tank 1   JS#PRSFLT2,((AN_ERR[5])*(ACFLAG))>AN_TO
+
+
+
+EN
+
+REM-----------------------------
+REM Pressure 1 Monitor
+REM-----------------------------
+#PRS1_ON
+   SB oMATPRS1
+   AN_ACT[4]=TIME
+   JP#NOOP,vPAGE=2
+   PRS_FLG=2
+   PRSTIME1=TIME
+#PRS1_WT
+   JP#PRSFLT2,TIME-PRSTIME1>5000
+   JP#PRS1_WT,((AN_ACT[4]<PRS1_LO)*(PRS1_EN))
+EN
+
+#PRS1_OF
+   CB oMATPRS1
+EN
+
+#PRSFLT1
+   PRS_ERR=PRS_FLG
+EN
+
+#PRSFLT2
+   PRS_ERR=PRS_FLG
+EN
+
+REM-----------------------------
+REM Pressure 2 Monitor
+REM-----------------------------
+#PRS2_ON
+   SB oMATPRS2
+   AN_ACT[5]=TIME
+   JP#NOOP,vPAGE=2
+   PRS_FLG4=4
+   PRSTIME2=TIME
+#PRS2_WT
+   JP#PRSFLT4,TIME-PRSTIME2>5000
+   JP#PRS2_WT,((AN_ACT[5]<PRS2_LO)*(PRS2_EN))
+EN
+
+#PRS2_OF
+   CB oMATPRS2
+EN
+
+#PRSFLT3
+   PRS_ERR=PRS_FLG3
+EN
+
+#PRSFLT4
+   PRS_ERR=PRS_FLG4
+EN
+
+
+REM==============================Module Messages=================================
+#M1046
+   vSYSMSG=MEC+(PRS_ERR-1)
+   WT10
+   vPAGE=4
+   MERR=MEC
+   JS#W_VCONT
+   PRS_ERR=0
+   JP#ESTOP1
+REM===============================End of Module==================================
+
+
+
+
+
+
+
+

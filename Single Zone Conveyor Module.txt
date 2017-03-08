@@ -1,0 +1,372 @@
+REM====================Single Zone Conveyor Auto Cycle Module===================
+REM             Author: Prog Dept   Date: ##/##/20##   Version: 1.0
+REM               ===============================================
+REM                              Revision History
+REM               ===============================================
+REM      Rev: Change:                                     Date:        By:
+REM      ------------------------------------------------------------------
+REM      01 - Modified From Base Module                 ##/##/##       XXX
+REM      ------------------------------------------------------------------
+REM
+REM==============================Module Functions================================
+REM ===============================================
+REM  Auto Cycle Main Routines (Thread 1)
+REM ===============================================
+   JS#S1402,VLV=0
+   JS#S2022,(@IN[iBYPASS]=0)
+
+   AC_INIT=0
+   vAUTOVIS="000"
+   cCRC=""
+   vPAGE=3
+   JS#A2010
+   JS#U020
+   CTM=0
+   ACFLAG=1
+
+   IF (FID_EN=1)
+      JS#W_VBAI
+      JS#VS_FWDS
+      vSYSPG=VSWIND
+   ENDIF
+
+   JS#SK_CLR
+      
+   JS#AC_INI
+   
+   vSYSPG=0
+
+#AC_MN1
+   SOL_TM=TIME
+   ACFLAG=1
+   JS#BT_REL
+   LT_STAT=0100
+   vPAGE=3
+   WT(100*ms)
+
+   JS#MOD_CHK
+   
+   JP#AC_DN,(@IN[iPIP3]=1)
+
+   JS#ST1ON
+   
+   CB oDNRDY
+   CB oUPBA
+   CB oDNBA
+   
+REM Width Adjust Module IF(CWID_EN=1) 
+REM Width Adjust Module    CB oUPRDY
+REM Width Adjust Module ELSE     
+    SB oUPRDY
+REM Width Adjust Module ENDIF
+
+REM Width Adjust Module IF((CWID_EN=1)|(VWID_EN=1))
+REM Width Adjust Module   GET VALUES
+REM Width Adjust Module   PMNG_TM=TIME
+REM Width Adjust Module ENDIF
+
+
+   JS#A2000
+
+#AC_LP
+   JP#AC_END,(vCSTOP|(@IN[iBYPASS]=0))
+   JS#MVIN_1,(@IN[iPIP1]=1)&(@OUT[oUPRDY]=1)
+   JS#MVIN_1,(@IN[iUPBA]=1)&(@OUT[oUPRDY]=1)
+   JP#AC_S,(@IN[iPIP2]=1)
+   JS#AC_AP,(AP_TE*AP_OUT*(SO_EN=0))>AP_TIME
+   JS#AC_SO,((TIME-SOL_TM)*ST_BY*SO_EN)>SLP_TM
+   
+   JS#MOD_LP
+   
+   JP#AC_LP
+
+#AC_END
+   AC_INIT=0
+   vAUTOVIS="000"
+   JS#ST1OF
+   CB oUPRDY
+   CB oDNBA
+   JS#S1403,(@IN[iBYPASS]=0)
+   JS#A2011
+   JP#AC_END,PING=1
+
+REM ===============================================   
+REM   Halt Additional Threads
+REM ===============================================
+REM   HX2
+REM   HX3
+REM   HX4
+REM   HX5
+REM   HX6
+REM ===============================================
+   
+   ZS
+   ACFLAG=0
+   JS#BT_REL
+   JP#CS_MN1
+
+REM -----------------------
+REM  Run Path
+REM -----------------------
+#AC_S
+   CB oDNRDY
+   CB oUPBA
+   CB oDNBA
+   CB oUPRDY
+   JP#AC_S,PING=1
+REM ==================
+REM     Locate Part
+REM ==================
+REM Board Locator Module   JS#LOCON,LOC_EN
+REM ==================
+   JS#A_PURGE,ST_BY=0
+   JP#AC_END,(vCSTOP|(@IN[iBYPASS]=0))
+   JS#A2002
+   JS#BT_REL
+   
+   JS#AC_DWLD
+
+#AC_RET
+   JS#WT_RSP("ACK"),PMGR_EN
+
+   CSS;CST
+
+   LT_STAT=0010
+   JS#A2003
+   tCTM=TIME
+   JS#SK_CLR
+
+   RUNNING=1
+   JS#PROG
+   IT*=1
+   
+   JS#SK_CLR
+   JS#VS_LOF
+
+   LT_STAT=0100
+   CCNT=CCNT+1
+   JS#INC_CNT
+
+REM==============================
+REM      Flow Monitor Check
+REM==============================
+REM Flow Module 1   JS#GET_FLO
+REM==============================
+
+   CTM=(TIME-tCTM)/1024
+   JS#MV_SBY
+   JS#U025
+   
+   RUNNING=0
+   JS#A2004
+
+REM =============================
+REM    Bi-Directional Traffic
+REM =============================
+REM   JP#AC_DN,BD_EN=0
+REM   JP#BID_DWN,BD_DIR=1
+REM   JP#BID_UP
+REM =============================
+
+REM -----------------------
+REM  Cycle Complete
+REM -----------------------
+#AC_DN
+REM ===================
+REM   Release Part
+REM ===================
+REM Board Locator Module   JS#LOCOF,LOC_EN
+REM ===================   
+   JS#ST1OF
+   JS#ST2OF
+   JS#CNV_ON
+#DONE_WT
+   JP#DONE_WT,@IN[iPIP3]=0
+   SB oDNBA
+
+   IF (@IN[iDNRDY]=0)
+      JS#A2005
+      JS#CNV_OF
+   ENDIF
+   SOL_TM=TIME
+   WT(100*ms)
+   
+#AC_OUT
+   JP#AC_END,(vCSTOP|(@IN[iBYPASS]=0))
+   JP#AC_MN1,@IN[iPIP3]=0
+   JS#AC_AP,(AP_TE*AP_OUT*(SO_EN=0))>AP_TIME
+   JS#AC_SO,((TIME-SOL_TM)*ST_BY*SO_EN)>SLP_TM
+   JP#AC_OUT,@IN[iDNRDY]=0
+
+   JS#MVOUT_1
+   JP#AC_MN1
+   
+REM ============================================
+REM  ZONE 1 CONVEYOR (Thread 1)
+REM ============================================
+
+REM -------------
+REM  Move In
+REM -------------
+#MVIN_1
+   JS#A2001
+   JS#CNV_ON
+   MV1_TMR=TIME
+   IF((ST_BY=0)&(_XQ2<0));XQ#A_PURGE,2;ENDIF
+
+#MV1_WT
+   JP#MV1_RST,(TIME-MV1_TMR)>(5000*ms)
+   JP#MV1_WT,@IN[iPIP1]=0
+   CB oUPRDY
+
+REM ===============================================
+REM   P-Select Send Barcode Scan Trigger
+REM ===============================================
+REM   JS#SD_TRIG
+REM ===============================================
+   MV1_TMR=TIME
+
+#MV1_WT2
+   JP#MV1_RST,(TIME-MV1_TMR)>(5000*ms)
+   JP#MV1_WT2,@IN[iPIP2]=0
+   WT(200*ms)
+   JS#CNV_OF;WT(200*ms)
+   JP#AC_END,(vCSTOP|(@IN[iBYPASS]=0))
+EN
+
+REM -------------
+REM  Move Out
+REM -------------
+#MVOUT_1
+   JS#A2006
+   JS#CNV_ON
+#MVOUTWT
+   JP#MVOUTWT,@IN[iPIP3]=0
+   SB oDNBA
+#LEAVEWT
+   JP#LEAVEWT,@IN[iPIP3]=1
+   WT(0*ms)
+   CB oDNBA
+   SB oUPRDY
+   JS#Z1_COF,(@IN[iUPBA]=0)
+EN
+
+REM -------------
+REM  Reset
+REM -------------
+#MV1_RST
+   JS#A2000
+   SB oUPRDY
+   CB oDNBA
+   JS#Z1_COF,(@IN[iUPBA]=0)
+EN
+
+REM ----------------
+REM  Conv Off Delay
+REM ----------------
+#Z1_COF;WT(500*ms);JS#CNV_OF;EN
+
+REM ===============================================
+REM  Auto Sub-Processes
+REM ===============================================
+
+REM -----------------------
+REM  Auto Purge
+REM -----------------------
+#AC_AP
+   JP#NOOP,_XQ2>0
+   XQ#A_PURGE,2
+EN
+
+REM -----------------------
+REM  Move to Solvent
+REM -----------------------
+#AC_SO
+   JS#ALLUP
+   JP#AC_SO,_XQ2>0
+   JS#MV_SOL
+EN
+
+REM==============================Module Messages=================================
+REM =================================
+REM  Auto Cycle Messages
+REM =================================
+#A2000
+   vAUTOMSG=2000
+   WT(30*ms)
+   vPAGE=3
+EN
+
+#A2001
+   vAUTOMSG=2001
+   WT(30*ms)
+   vPAGE=3
+EN
+
+#A2002
+   vAUTOMSG=2002
+   WT(30*ms)
+   vPAGE=3
+EN
+
+#A2003
+   vAUTOMSG=2003
+   WT(30*ms)
+   vPAGE=3
+EN
+
+#A2004
+   vAUTOMSG=2004
+   WT(30*ms)
+   vPAGE=3
+EN
+
+#A2005
+   vAUTOMSG=2005
+   WT(30*ms)
+   vPAGE=3
+EN
+
+#A2006
+   vAUTOMSG=2006
+   WT(30*ms)
+   vPAGE=3
+EN
+
+#A2007
+   vAUTOMSG=2007
+   WT(30*ms)
+   vPAGE=3
+EN
+
+#A2008
+   vAUTOMSG=2008
+   WT(30*ms)
+   vPAGE=3
+EN
+
+#A2009
+   vAUTOMSG=2009
+   WT(30*ms)
+   vPAGE=3
+EN
+
+#A2010
+   vAUTOMSG=2010
+   WT(30*ms)
+   vPAGE=3
+EN
+
+#A2011
+   vAUTOMSG=2011
+   WT(30*ms)
+   vPAGE=3
+EN
+
+#A2012
+   vAUTOMSG=2012
+   WT(30*ms)
+   vPAGE=3
+EN
+
+REM===============================End of Module=================================

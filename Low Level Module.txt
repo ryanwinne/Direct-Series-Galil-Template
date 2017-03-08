@@ -1,0 +1,199 @@
+REM=========================GSE Scale/Low Level Module===========================
+REM             Author: Prog Dept   Date: 10/27/2014   Version: 1.0
+REM               ===============================================
+REM                              Revision History
+REM               ===============================================
+REM      Rev: Change:                                     Date:        By:
+REM      ------------------------------------------------------------------
+REM      01 - Modified From Base Module                 ##/##/##       XXX
+REM      ------------------------------------------------------------------
+REM
+REM==============================Initialize I/O==================================
+#LOW_IO
+   iLEVELA=7005
+   iLEVELB=iNA
+EN
+
+REM============================Initialize Variables==============================
+#LOW_INI
+   DM SCALE[4]
+   SCLA_WRN=1
+   SCLB_WRN=1
+   LL_ERR=0
+EN
+
+REM===============================Check Variables================================   
+#LOW_CHK
+REM SCALE OPTION   INIT=3
+REM SCALE OPTION   JP#LOW_RST,LLA_EN<0
+REM SCALE OPTION   JP#LOW_RST,LOW_A<0
+REM SCALE OPTION   JP#LOW_RST,EMPTY_A<0
+
+REM SCALE OPTION   JP#LOW_RST,LLB_EN<0
+REM SCALE OPTION   JP#LOW_RST,LOW_B<0
+REM SCALE OPTION   JP#LOW_RST,EMPTY_B<0
+EN
+
+REM===============================Reset Variables================================
+#LOW_RST
+REM SCALE OPTION   JS#M4000
+REM SCALE OPTION   LLA_EN=0
+REM SCALE OPTION   LOW_A=0
+REM SCALE OPTION   EMPTY_A=0
+
+REM SCALE OPTION   LLB_EN=0
+REM SCALE OPTION   LOW_B=0
+REM SCALE OPTION   EMPTY_B=0
+   
+   JP#AUTO2
+
+REM===============================Error Checking=================================
+#LOW_SCN
+   JP#ESTOP,LL_ERR<>0
+EN
+
+REM===============================Error Handling=================================
+#LOW_ERR
+   MEC=1042
+   JP#M1042,LL_ERR=1
+   MEC=1043;
+   JP#M1043,LL_ERR=2
+EN
+
+REM==============================Module Functions================================
+
+REM ==========================
+REM  Low Level Check Wrapper
+REM ==========================
+#GET_LOW
+  JP#NOOP,VLV=0
+  JP#LOW_LVL
+EN
+
+REM ==========================
+REM    Material Low Check
+REM ==========================
+#LOW_LVL
+
+REM ===============Digital Low Level==================
+REM FLOAT OPTION    LL_VAR=1
+REM FLOAT OPTION   JP#LOW_EMP,(@IN[iLEVELA]=0)&(LLA_EN=1)
+REM FLOAT OPTION    LL_VAR=2;
+REM FLOAT OPTION    JP#LOW_EMP,(@IN[iLEVELB]=0)&(LLB_EN=1)
+REM ==================================================
+
+REM ==============GSE Scale Low Level=================
+REM SCALE OPTION   LL_VAR=1
+REM SCALE OPTION   JP#LOW_EMP,((SCALE[1]<=EMPTY_A)&(LLA_EN=1))
+REM SCALE OPTION   JS#LOW_WRN,((SCALE[1]<=LOW_A)&(LLA_EN=1)&(SCLA_WRN=1))
+REM SCALE OPTION   LL_VAR=2
+REM SCALE OPTION   JP#LOW_EMP,((SCALE[2]<=EMPTY_B)&(LLB_EN=1))
+REM SCALE OPTION   JS#LOW_WRN,((SCALE[2]<=LOW_B)&(LLB_EN=1)&(SCLB_WRN=1))
+REM ==================================================
+
+EN
+
+REM ==========================
+REM    Material Low Warning
+REM ==========================
+#LOW_WRN
+   JS#M1044,LL_VAR=1
+   JS#M1045,LL_VAR=2
+   IF(ACFLAG=0)
+      vPAGE=1
+   ELSE
+      vPAGE=3
+   ENDIF
+EN
+
+REM ==========================
+REM    Material Empty Error
+REM ==========================
+#LOW_EMP
+   LL_ERR=LL_VAR
+   JP#LOW_EMP
+EN
+
+REM ==========================
+REM     Warning Reset
+REM ==========================
+#LOW_WRS
+   SCLA_WRN=1
+   SCLB_WRN=1
+EN
+
+REM==============================Module Messages=================================
+#M1042
+   vPAGE=4
+   vSYSMSG=1042
+   
+   IF(LOG_EN)
+      vACK=0
+      MG {EH}{^02},"<Log>Error",{^09},"Material A Empty",{^03}
+      JS#WT_ACK   
+   ENDIF
+   
+   MERR=MEC
+   JS#W_VCONT
+   LL_ERR=0
+   JP#ESTOP1
+   
+#M1043
+   vPAGE=4
+   vSYSMSG=1043
+   
+   IF(LOG_EN)
+      vACK=0
+      MG {EH}{^02},"<Log>Error",{^09},"Material B Empty",{^03}
+      JS#WT_ACK   
+   ENDIF
+   
+   MERR=MEC
+   JS#W_VCONT
+   LL_ERR=0
+   JP#ESTOP1   
+   
+#M1044
+   vPAGE=4
+   vSYSMSG=1044
+   MERR=MEC
+   
+   IF(LOG_EN)
+      vACK=0
+      MG {EH}{^02},"<Log>Warning",{^09},"Material A Low",{^03}
+      JS#WT_ACK   
+   ENDIF
+   
+   JS#W_VCONT
+   SCLA_WRN=0
+   MEC=1102
+   MERR=0
+EN
+
+#M1045
+   vPAGE=4
+   vSYSMSG=1045
+   MERR=MEC
+   
+   IF(LOG_EN)
+      vACK=0
+      MG {EH}{^02},"<Log>Warning",{^09},"Material B Low",{^03}
+      JS#WT_ACK   
+   ENDIF
+   
+   JS#W_VCONT
+   SCLB_WRN=0
+   MEC=1102
+   MERR=0
+EN   
+
+REM===============================End of Module==================================
+
+
+
+
+
+
+
+
+

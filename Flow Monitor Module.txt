@@ -1,0 +1,150 @@
+REM=============================Flow Monitor Module==============================
+REM           Author: Prog Dept   Date: 11/04/2014   Version: 1.01
+REM               ===============================================
+REM                              Revision History
+REM               ===============================================
+REM      Rev: Change:                                     Date:        By:
+REM      ------------------------------------------------------------------
+REM      01 - Modified From Base Module                 ##/##/##       XXX
+REM      ------------------------------------------------------------------
+REM
+REM==============================Initialize I/O==================================
+#FLO_IO
+EN
+
+REM============================Initialize Variables==============================
+#FLO_INI
+   FC_ER1=0;FC_ER2=0
+   DEZ=0;DEW=0  
+EN
+
+REM===============================Check Variables================================
+#FLO_CHK
+   INIT=2
+   JP#FLO_RST,FC_ENA<0
+   JP#FLO_RST,FC_ENB<0
+   JP#FLO_RST,FC_SETA<0
+   JP#FLO_RST,FC_SETB<0
+   JP#FLO_RST,FC_DEVA<0
+   JP#FLO_RST,FC_DEVB<0
+EN
+
+
+REM===============================Reset Variables================================
+#FLO_RST
+   JS#M4000
+   FC_ENA=0
+   FC_ENB=0
+   FC_SETA=0
+   FC_SETB=0
+   FC_DEVA=0
+   FC_DEVB=0
+   JP#AUTO2
+
+REM===============================Error Checking=================================
+#FLO_SCN
+   JP#ESTOP,(FC_ER1<>0)
+   JP#ESTOP,(FC_ER2<>0)
+EN
+
+REM===============================Error Handling=================================
+#FLO_ERR
+   MEC=1040;JP#M1040,FC_ER1<>0
+   MEC=1041;JP#M1040,FC_ER2<>0
+EN
+
+REM==============================Module Functions================================
+REM -------------------------
+REM  Flow Check Wrapper
+REM -------------------------
+#GET_FLO
+   FCA_CAL=1992;FCB_CAL=1997
+   FL_MATA=0;FL_MATB=0
+   FL_DEVA=0;FL_DEVB=0
+   JS#AC_XC,ACFLAG
+   JS#OS_XC,(1-ACFLAG)
+EN
+   
+REM -------------------------
+REM  Auto Cycle Flow Check
+REM -------------------------
+#AC_XC
+   JP#NOOP,VLV=0
+   JP#NOOP,((FC_ENA+FC_ENB)=0)
+   FL_MATA=_DEZ;FL_MATB=_DEW
+   FL_MATA=@ABS[FL_MATA]/FCA_CAL
+   FL_MATB=@ABS[FL_MATB]/FCB_CAL
+   
+   JP#NOOP,((FC_SETA<=0)&(FC_SETB<=0))
+   FL_DEVA=(@ABS[FL_MATA-FC_SETA]/FC_SETA)*100
+   FL_DEVB=(@ABS[FL_MATB-FC_SETB]/FC_SETB)*100
+  
+   JS#U300
+   JS#U150,FC_ENA=1
+   JS#U151,FC_ENB=1
+   JP#NOOP,ACFLAG=0
+   JS#FC_ER
+EN
+
+REM ------------------------------
+REM One Shot Flow Check
+REM ------------------------------
+#OS_XC
+  JP#NOOP,VLV=0
+
+  FL_MATA=_DEZ;FL_MATB=_DEW
+  FL_MATA=@ABS[FL_MATA]/FCA_CAL
+  FL_MATB=@ABS[FL_MATB]/FCB_CAL
+  JP#NOOP,((FC_SETA<=0)&(FC_SETB<=0))
+  
+  FL_DEVA=@ABS[FL_MATA-FC_SETA]/FC_SETA*100
+  FL_DEVB=@ABS[FL_MATB-FC_SETB]/FC_SETB*100
+  JS#U300
+  JS#U150,FC_ENA
+  JS#U151,FC_ENB
+EN
+
+#FC_ER
+   FC_ER1=((FL_DEVA>FC_DEVA)&(FC_ENA=1))
+   FC_ER2=((FL_DEVB>FC_DEVB)&(FC_ENB=1))
+EN
+
+REM==============================Module Messages=================================
+#M1040
+   vPAGE=4
+   vSYSMSG=MEC
+   MERR=MEC
+   JS#W_VCONT
+   FC_ER1=0
+   FC_ER2=0
+   MERR=0
+   JP#ESTOP1
+
+#U150
+   vACK=0
+   MG{EH}{^02},"Flow Monitor A Data:"
+   MG{EH}{N}{^02}," Expected Flow Amount:",FC_SETA{Z3.2},"cc."
+   MG{EH}{^02}," Actual Flow Amount:",FL_MATA{Z3.2},"cc."
+   MG{EH}{N}{^02},"  Allowable % Deviation:",FC_DEVA{Z3.1},"%"
+   MG{EH}{^02},"        Actual % Deviation:",FL_DEVA{Z3.1},"%",{^03}
+   JS#WT_ACK
+EN
+
+#U151
+   vACK=0
+   MG{EH}{^02},"Flow Monitor B Data:"
+   MG{EH}{N}{^02}," Expected Flow Amount:",FC_SETB{Z3.2},"cc."
+   MG{EH}{^02}," Actual Flow Amount:",FL_MATB{Z3.2},"cc."
+   MG{EH}{N}{^02},"  Allowable % Deviation:",FC_DEVB{Z3.1},"%"
+   MG{EH}{^02},"        Actual % Deviation:",FL_DEVB{Z3.1},"%",{^03}
+   JS#WT_ACK
+EN
+
+#U300
+   vACK=0
+   O=FL_MATA
+   N=FL_MATB
+   MG {EH}{^02},"<LOG>Dispense",{^09},O{Z3.2},{^09},N{Z3.1},{^03}
+   JS#WT_ACK
+EN
+REM===============================End of Module==================================

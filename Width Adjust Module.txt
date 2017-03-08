@@ -1,0 +1,769 @@
+REM============================Dual Width Adjust Module============================
+REM             Author: Prog Dept   Date: 01/08/2015   Version: 1.0
+REM               ===============================================
+REM                              Revision History
+REM               ===============================================
+REM      Rev: Change:                                     Date:        By:
+REM      ------------------------------------------------------------------
+REM      01 - Modified From Base Module                 11/03/16       MAC
+REM      ------------------------------------------------------------------
+REM
+REM==============================Initialize I/O==================================
+#CWA_IO
+EN
+
+#VWA_IO
+   iLOCPIN1=7020
+   iLOCPIN2=7021
+   oVLOCPIN=7027
+EN
+
+REM============================Initialize Variables==============================
+REM===============================Conveyor Width=================================
+#CWA_INI
+   CURCWDTH=100
+   SETCWDTH=CURCWDTH
+   CWDTH_ER=0
+   CWA_FLG=0
+
+REM 'Jog Conveyor to the minumum and maximum positions. Measure the difference 
+REM 'between each conveyor in millimeters and the counts at each position
+   cMIN_MM=50
+   cMAX_MM=463
+   cMIN_CT=0;       'Counts at cMIN_MM width
+   cMAX_CT=688250;     'Counts at cMAX_MM width
+   
+   cWID_FL=5120000
+   cWID_BL=1000
+   
+   cCNT_MM=((cMAX_CT-cMIN_CT)/(cMAX_MM-cMIN_MM))
+   cCNT_DIF=(cMIN_CT)-(cMIN_MM*cCNT_MM)
+   
+   cWID_SP=10000
+   cWID_AD=200000
+EN
+
+REM=================================Valve Width===================================
+
+#VWA_INI
+   CURVWDTH=100
+   SETVWDTH=CURVWDTH
+   VWDTH_ER=0
+   VWA_FLG=0
+
+REM 'Jog Valves to minimum and maximum positions. Measure the difference between
+REM 'each valve in milimeters and the counts at each position
+   vMIN_MM=40
+   vMAX_MM=170
+   vMIN_CT=355177;     'Counts at vMIN_MM width
+   vMAX_CT=-21000;     'Counts at vMAX_MM width
+   
+   vWID_FL=357000
+   vWID_BL=-22000
+   
+   vCNT_MM=((vMAX_CT-vMIN_CT)/(vMAX_MM-vMIN_MM))
+   vCNT_DIF=(vMIN_CT)-(vMIN_MM*vCNT_MM)
+   
+   vWID_SP=100000
+   vWID_AD=200000
+EN
+
+REM===============================Check Variables================================
+#CWA_CHK
+   INIT=14
+   JP#CWA_RST,SETCWDTH<0
+   JP#CWA_RST,CWID_EN<0
+EN
+
+#VWA_CHK
+   INIT=15
+   JP#VWA_RST,SETVWDTH<0
+   JP#VWA_RST,VWID_EN<0
+EN
+
+REM===============================Reset Variables================================
+#CWA_RST 
+   JS#M4000
+   SETCWDTH=100
+   CWID_EN=0
+   JP#AUTO2
+
+#VWA_RST 
+   JS#M4000
+   SETVWDTH=100
+   VWID_EN=0
+   JP#AUTO2
+
+REM===============================Error Checking=================================
+#CWA_SCN
+   JP#ESTOP,(CWDTH_ER<>0)
+   
+   JS#CURCWTH
+   
+   nPROCESS[0]=CURCWDTH
+   nPROCESS[3]=SETCWDTH
+EN
+
+#VWA_SCN
+   JP#ESTOP,(VWDTH_ER<>0)
+   
+   JS#CURVWTH
+   
+   nPROCESS[1]=CURVWDTH
+   nPROCESS[4]=SETVWDTH
+EN
+
+REM===============================Error Handling=================================
+#CWA_ERR
+   MEC=1310;JP#M1310,(CWDTH_ER=1)
+   CWA_FLG=0 ;'Reset flag for moving conveyor
+EN
+
+#VWA_ERR
+   MEC=1320;JP#M1320,(VWDTH_ER=1)
+   VWA_FLG=0 ;'Reset flag for moving valves
+EN
+
+REM==============================Module Functions================================
+REM =-=-=-=-=-=-=-
+REM  Tunes
+REM =-=-=-=-=-=-=-
+#CWA_TUN
+REM CWA=D   ER ,,,10000
+REM CWA=D   ACD=cWID_AD
+REM CWA=D   DCD=cWID_AD
+REM CWA=D   SPD=cWID_SP
+REM CWA=D   BLD=cWID_BL
+REM CWA=D   FLD=cWID_FL
+REM CWA=D   MT ,,,-1
+REM CWA=D   CE ,,,2
+REM CWA=D   KDD=130
+REM CWA=D   KPD=70
+REM CWA=D   KID=.85
+
+
+REM CWA=E   ER ,,,,10000
+REM CWA=E   ACE=cWID_AD
+REM CWA=E   DCE=cWID_AD
+REM CWA=E   SPE=cWID_SP
+REM CWA=E   BLE=cWID_BL
+REM CWA=E   FLE=cWID_FL
+REM CWA=E   MT ,,,,-1
+REM CWA=E   CE ,,,,2
+REM CWA=E   KDE=130
+REM CWA=E   KPE=70
+REM CWA=E   KIE=.85
+  
+
+
+
+   
+EN
+
+#VWA_TUN
+
+REM VWA=E   ER ,,,,10000
+REM VWA=E   ACE=vWID_AD
+REM VWA=E   DCE=vWID_AD
+REM VWA=E   SPE=vWID_SP
+REM VWA=E   BLE=vWID_BL
+REM VWA=E   FLE=vWID_FL
+REM VWA=E   MT ,,,,1
+REM VWA=E   CE ,,,,0
+REM VWA=E   KDE=30
+REM VWA=E   KPE=2
+REM VWA=E   KIE=0.01
+
+
+REM VWA=F   ER ,,,,,10000
+REM VWA=F   ACF=vWID_AD
+REM VWA=F   DCF=vWID_AD
+REM VWA=F   SPF=vWID_SP
+REM VWA=F   BLF=vWID_BL
+REM VWA=F   FLF=vWID_FL
+REM VWA=F   MT ,,,,,1
+REM VWA=F   CE ,,,,,0
+REM VWA=F   KDF=30
+REM VWA=F   KPF=2
+REM VWA=F   KIF=0.01  
+
+  
+EN
+
+REM =-=-=-=-=-=-=-
+REM  Conveyor Home
+REM =-=-=-=-=-=-=-
+#CWA_HM
+   JS#CWA_TUN
+   JS#CLRBD
+   vSYSMSG=2002
+
+
+REM CWA=D      ER ,,,10000
+REM CWA=D      ACD=cWID_AD
+REM CWA=D      DCD=cWID_AD
+REM CWA=D      FLD=2147483647
+REM CWA=D      BLD=-2147483648
+REM CWA=D      SHD
+REM CWA=D      WT(250*ms)
+REM CWA=D      JP#CWA_HM1,(_HMW=0)
+REM CWA=D      FED
+REM CWA=D      SPD=10000
+REM CWA=D      BGD
+REM CWA=D      AMD
+
+   
+REM CWA=E      ER ,,,,10000
+REM CWA=E      ACE=cWID_AD
+REM CWA=E      DCE=cWID_AD
+REM CWA=E      FLE=2147483647
+REM CWA=E      BLE=-2147483648
+REM CWA=E      SHE
+REM CWA=E      WT(250*ms)
+REM CWA=E      JP#CWA_HM1,(_HME=0)
+REM CWA=E      FEE
+REM CWA=E      SPE=10000
+REM CWA=E      BGE
+REM CWA=E      AME
+   
+   
+   
+#CWA_HM1
+REM CWA=D   PRD=12000
+REM CWA=D   SPD=8000
+REM CWA=D   BGD
+REM CWA=D   AMD
+REM CWA=D   FED
+REM CWA=D   SPD=8000
+REM CWA=D   BGD
+REM CWA=D   AMD
+REM CWA=D   PRD=1000
+REM CWA=D   SPD=8000
+REM CWA=D   BGD
+REM CWA=D   AMD
+REM CWA=D   DPD=0 
+
+REM CWA=E   PRE=12000
+REM CWA=E   SPE=8000
+REM CWA=E   BGE
+REM CWA=E   AME
+REM CWA=E   FEE
+REM CWA=E   SPE=8000
+REM CWA=E   BGE
+REM CWA=E   AME
+REM CWA=E   PRE=1000
+REM CWA=E   SPE=8000
+REM CWA=E   BGE
+REM CWA=E   AME
+REM CWA=E   DPE=0   
+
+REM ==========================
+REM Conveyor Adjust Tune
+REM ==========================
+   JS#CWA_TUN
+   
+   IF(CURCWDTH<>SETCWDTH)
+      JS#CWA_GO2
+   ENDIF
+EN
+
+REM =-=-=-=-=-=-=-
+REM  Valve Home
+REM =-=-=-=-=-=-=-
+#VWA_HM
+   JS#VWA_TUN
+   
+  
+REM VWA=E   ER ,,,,10000
+REM VWA=E   ACE=vWID_AD
+REM VWA=E   DCE=vWID_AD
+REM VWA=E   FLE=2147483647
+REM VWA=E   BLE=-2147483648
+REM VWA=E   JS#LOC_RET
+REM VWA=E   SHE
+REM VWA=E   JP#VWA_HM1,(_HME=0)
+REM VWA=E   FEE
+REM VWA=E   SPE=40000
+REM VWA=E   BGE
+REM VWA=E   AME
+ 
+
+  
+REM VWA=F   ER ,,,,,10000
+REM VWA=F   ACF=vWID_AD
+REM VWA=F   DCF=vWID_AD
+REM VWA=F   FLF=2147483647
+REM VWA=F   BLF=-2147483648
+REM VWA=F   JS#LOC_RET
+REM VWA=F   SHF
+REM VWA=F   JP#VWA_HM1,(_HMF=0)
+REM VWA=F   FEF
+REM VWA=F   SPF=40000
+REM VWA=F   BGF
+REM VWA=F   AMF
+
+   
+#VWA_HM1
+
+
+REM VWA=E   PRE=12000;
+REM VWA=E   SPE=8000;
+REM VWA=E   BGE
+REM VWA=E   AME
+REM VWA=E   FEE
+REM VWA=E   SPE=8000
+REM VWA=E   BGE
+REM VWA=E   AME
+REM VWA=E   PRE=1000
+REM VWA=E   SPE=8000
+REM VWA=E   BGE
+REM VWA=E   AME
+REM VWA=E   DPE=0
+REM VWA=E   JS#LOC_EXT
+  
+
+REM VWA=F   PRF=12000;
+REM VWA=F   SPF=8000;
+REM VWA=F   BGF
+REM VWA=F   AMF
+REM VWA=F   FEF
+REM VWA=F   SPF=8000
+REM VWA=F   BGF
+REM VWA=F   AMF
+REM VWA=F   PRF=1000
+REM VWA=F   SPF=8000
+REM VWA=F   BGF
+REM VWA=F   AMF
+REM VWA=F   DPF=0
+REM VWA=F   JS#LOC_EXT 
+
+REM ==========================
+REM Valve Adjust Tune
+REM ==========================
+   JS#VWA_TUN
+   
+   IF(CURVWDTH<>SETVWDTH)
+      JS#VWA_GO2
+   ENDIF
+EN
+
+REM =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+REM  Move Conveyor to set Position
+REM =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#CWA_GO
+   bMAN[5]=0
+   SETCWDTH=nMAN[1]
+   HX2;ST;AM
+   JS#TUNE
+   JS#ALLUP
+   JS#SAFEZ
+   WT1000
+   JP#U602,((SETCWDTH=CURCWDTH)&(vPAGE=1))
+   JS#LED_RS
+   
+#CWA_GO2
+   CWA_FLG=1
+   
+
+REM CWA=D      STD
+REM CWA=D      AMD
+
+
+REM CWA=E      STE
+REM CWA=E      AME
+
+   
+   IF(HOMING<>1)
+      IF(ACFLAG<>1)
+         tCPAGE=vPAGE
+      ELSE
+         tCPAGE=3
+      ENDIF
+   ENDIF
+   JS#DR_CLOS
+   
+REM ------------------------------------------
+REM  Round the set point to the nearest tenth
+REM ------------------------------------------
+   cTEMP=(SETCWDTH*10)
+   SETCWDTH=(@RND[cTEMP])/10
+   
+   JP#CWA_SET,(SETCWDTH=CURCWDTH)
+   JP#CWTH_ER,((SETCWDTH<cMIN_MM)|(SETCWDTH>cMAX_MM))
+   cTEMP=((SETCWDTH*cCNT_MM)+cCNT_DIF)
+   CONWDTH=@RND[cTEMP]
+   
+   JS#ST1OF
+   IF((ACFLAG*AC_INIT)=1);HX1;ENDIF
+   JS#CLRBD,(HOMING<>1)
+   JS#ST1ON,((ACFLAG=1)&(HOMING=0))
+   JS#M3003,(HOMING<>1)
+   
+   JS#U601
+REM CWA=D      SHD
+REM CWA=D      PAD=CONWDTH
+REM CWA=D      SPD=cWID_SP
+REM CWA=D      ACD=cWID_AD
+REM CWA=D      DCD=cWID_AD
+REM CWA=D      BGD
+REM CWA=D      AMD
+   
+REM CWA=E      SHE
+REM CWA=E      PAE=CONWDTH
+REM CWA=E      SPE=cWID_SP
+REM CWA=E      ACE=cWID_AD
+REM CWA=E      DCE=cWID_AD
+REM CWA=E      BGE
+REM CWA=E      AME
+
+
+#CWA_GO3
+   IF(MODE=1)
+      CAXIS=1
+      HX2
+      XQ#TB_XY,2
+      DRFLAG=0
+   ENDIF
+   
+   IF(HOMING<>1)
+      vPAGE=tCPAGE
+   ENDIF
+   
+   tCPAGE=0
+   CWA_FLG=0
+   IF(_XQ1<0);XQ#AC_LP,1;ENDIF
+EN
+
+REM =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+REM  Move Valve to set Position
+REM =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#VWA_GO
+   bMAN[4]=0
+   SETVWDTH=nMAN[0]
+   WT1000
+   JP#U604,((SETVWDTH=CURVWDTH)&(vPAGE=1))
+REM VWA=E      STE
+REM VWA=E      AME
+   
+REM VWA=F      STF
+REM VWA=F      AMF
+   
+   HX2
+   JS#LED_RS
+   
+#VWA_GO2
+   VWA_FLG=1
+REM VWA=E      STE
+REM VWA=E      AME
+   
+REM VWA=F      STF
+REM VWA=F      AMF
+   IF(HOMING<>1)
+      IF(ACFLAG<>1)
+         tVPAGE=vPAGE
+      ELSE
+         tVPAGE=3
+      ENDIF
+   ENDIF
+   JS#DR_CLOS
+   
+REM ------------------------------------------
+REM  Round the set point to the nearest tenth
+REM ------------------------------------------
+   vTEMP=(SETVWDTH*10)
+   SETVWDTH=(@RND[vTEMP])/10
+   
+   JP#VWA_SET,(SETVWDTH=CURVWDTH)
+   JP#VWTH_ER,(SETVWDTH<vMIN_MM)|(SETVWDTH>vMAX_MM)
+   vTEMP=((SETVWDTH*vCNT_MM)+(vCNT_DIF))
+   VLVWDTH=@RND[vTEMP]
+   
+   JS#M3004,((HOMING<>1)&(CWA_FLG=0))
+   JS#LOC_RET
+   
+   JS#U603
+REM VWA=E      SHE
+REM VWA=E      PAE=VLVWDTH
+REM VWA=E      SPE=vWID_SP
+REM VWA=E      ACE=vWID_AD
+REM VWA=E      DCE=vWID_AD
+REM VWA=E      BGE
+REM VWA=E      AME
+
+   
+REM VWA=F      SHF
+REM VWA=F      PAF=VLVWDTH
+REM VWA=F      SPF=vWID_SP
+REM VWA=F      ACF=vWID_AD
+REM VWA=F     DCF=vWID_AD
+REM VWA=F      BGF
+REM VWA=F      AMF
+
+   
+   JS#LOC_EXT
+   WT400
+
+#VWA_GO3
+   IF(MODE=1)
+      CAXIS=1
+      HX2
+      XQ#TB_XY,2
+      DRFLAG=0
+   ENDIF
+   
+   IF((HOMING<>1)&(CWA_FLG<>1))
+      vPAGE=tVPAGE
+   ENDIF
+   
+   tVPAGE=0
+   VWA_FLG=0
+EN
+
+REM =-=-=-=-=-=-=-=-=-=-=-=-=-
+REM  Calculate Current Widths
+REM =-=-=-=-=-=-=-=-=-=-=-=-=-
+#CURCWTH
+REM CWA=D      TMPCWDTH=((_TPW-cCNT_DIF)/cCNT_MM)
+ 
+REM CWA=E      TMPCWDTH=((_TPE-cCNT_DIF)/cCNT_MM)  
+   
+   TMPCWDTH=TMPCWDTH*10
+   TMPCWDTH=@RND[TMPCWDTH]
+   TMPCWDTH=TMPCWDTH/10
+   CURCWDTH=TMPCWDTH
+EN
+
+#CURVWTH
+
+REM VWA=E      TMPVWDTH=((_TPE-vCNT_DIF)/vCNT_MM)
+  
+
+REM VWA=F      TMPVWDTH=((_TPF-vCNT_DIF)/vCNT_MM)  
+   
+   TMPVWDTH=TMPVWDTH*10
+   TMPVWDTH=@RND[TMPVWDTH]
+   TMPVWDTH=TMPVWDTH/10
+   CURVWDTH=TMPVWDTH
+EN
+
+REM =-=-=-=-=-=-=-=-=-=-=-=-=-=-
+REM  Width Already Set Messages
+REM =-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#CWA_SET
+   JS#U602,((SETCWDTH=CURCWDTH)&(vPAGE=1))
+   JP#CWA_GO3,(MODE=1)
+EN
+
+#VWA_SET
+   JP#U604,((SETVWDTH=CURVWDTH)&(vPAGE=1))
+   JP#VWA_GO3,(MODE=1)
+EN
+
+REM =-=-=-=-=-=-=-=-=-=-=
+REM  Width Error Routines
+REM =-=-=-=-=-=-=-=-=-=-=
+#CWTH_ER
+   CWDTH_ER=1
+   JP#CWTH_ER
+EN
+
+#VWTH_ER
+  VWDTH_ER=1
+  JP#VWTH_ER
+EN
+
+REM =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+REM  Gets Widths for Auto Cycle (From Portal)
+REM =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+#GET_CWA
+   CB oUPRDY
+   CONWDTH=0
+   JP#CWTH_ER,((SETCWDTH<cMIN_MM)|(SETCWDTH>cMAX_MM))
+   
+   IF(CURCWDTH<>SETCWDTH)
+      JS#ST1OF
+      JS#CWA_GO2
+      JS#ST1ON
+   ENDIF
+EN
+
+#GET_VWA
+   CB oUPRDY
+   VLVWDTH=0
+   JP#VWTH_ER,((SETVWDTH<vMIN_MM)|(SETVWDTH>vMAX_MM))
+   
+   IF(CURVWDTH<>SETVWDTH)
+      JS#VWA_GO2
+   ENDIF
+EN
+
+REM =-=-=-=-=-=-=-=-=-=-=-=-=-=
+REM  Valve Cyclestop Functions
+REM =-=-=-=-=-=-=-=-=-=-=-=-=-=
+#VWA_CS
+REM VWA=E      SHE
+
+REM VWA=F      SHF
+   JS#LOC_EXT
+EN
+
+REM =-=-=-=-=-=-=-=-=-
+REM  Manual Functions
+REM =-=-=-=-=-=-=-=-=-
+#CWA_MAN
+   IF(nMAN[1]<cMIN_MM)
+      nMAN[1]=cMIN_MM
+   ENDIF
+   IF(nMAN[1]>cMAX_MM)
+      nMAN[1]=cMAX_MM
+   ENDIF
+   
+   JS#CWA_GO,(bMAN[5]=1)
+EN
+
+#VWA_MAN
+   IF(nMAN[0]<vMIN_MM)
+      nMAN[0]=vMIN_MM
+   ENDIF
+   IF(nMAN[0]>vMAX_MM)
+      nMAN[0]=vMAX_MM
+   ENDIF
+   
+   JS#VWA_GO,(bMAN[4]=1)
+EN
+
+REM =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+REM  Auto Cycle Functions
+REM =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=
+#CWA_AC
+   JS#GET_CWA,((CURCWDTH)<>(SETCWDTH))
+JP#CWA_AC
+
+#VWA_AC
+   JS#GET_VWA,((CURVWDTH)<>(SETVWDTH))
+JP#VWA_AC
+
+REM =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+REM  Wait for Adjusts to Complete
+REM =-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+#CWA_WT
+   JP#CWA_WT,(CWA_FLG=1)
+EN
+
+#VWA_WT
+   JP#VWA_WT,(VWA_FLG=1)
+EN
+
+REM =-=-=-=-=-=-=-=-=
+REM  Lock Pin Extend
+REM =-=-=-=-=-=-=-=-=
+#LOC_EXT
+   ZORO=0;CB oVLOCPIN
+   PNEC=1262;SENINP=iLOCPIN1;JS#OPTO(SENINP,0,TIME,PNEC)
+   PNEC=1263;SENINP=iLOCPIN2;JS#OPTO(SENINP,0,TIME,PNEC)
+EN
+
+
+REM =-=-=-=-=-=-=-=-=
+REM  Lock Pin Retract
+REM =-=-=-=-=-=-=-=-=
+#LOC_RET
+   ZORO=1;SB oVLOCPIN
+   PNEC=1264;SENINP=iLOCPIN1;JS#OPTO(SENINP,1,TIME,PNEC)
+   PNEC=1265;SENINP=iLOCPIN2;JS#OPTO(SENINP,1,TIME,PNEC)
+EN
+
+REM =-=-=-=-=-=-=-=-=-=-=-=-
+REM  Conveyor Min/Max Check
+REM =-=-=-=-=-=-=-=-=-=-=-=-
+#CWA_LMT
+   ER ,,,10000
+   ACW=cWID_AD
+   DCW=cWID_AD
+   SPW=cWID_SP
+   FLW=2147483647
+   BLW=-2147483648
+   SHW
+   JS#SAFEZ
+   FEW;SPW=100000;BGW;AMW
+   cMIN_CT=_TPW
+   JS#M1311 
+   ;'Ask user to measure the distance 
+   PAW _TPW+100000
+   BGW;AMW
+   cMAX_CT=_TPW
+   JS#M1312 
+   ;'Ask user to measure the distance
+   cCNT_MM=((cMAX_CT-cMIN_CT)/(cMAX_MM-cMIN_MM))
+   cCNT_DIF=(cMIN_CT)-(cMIN_MM*cCNT_MM)
+REM   JS#CWA_HM
+EN
+
+
+REM==============================Module Messages=================================
+#U601
+   vACK=0
+   MG{EH}{^02},"<SYS> Moving Conveyor...",{^03}
+   JS#WT_ACK
+EN
+
+#U602
+   vACK=0
+   MG{EH}{^02},"<SYS> Conveyor Width Set",{^03}
+   JS#WT_ACK
+EN
+
+#U603
+   vACK=0
+   MG{EH}{^02},"<SYS> Moving Valve...",{^03}
+   JS#WT_ACK
+EN
+
+#U604
+   vACK=0
+   MG{EH}{^02},"<SYS> Valve Width Set",{^03}
+   JS#WT_ACK
+EN
+
+#M1310
+   vSYSMSG=1310
+   vPAGE=4
+   MERR=MEC
+   JS#W_VCONT
+   CWDTH_ER=0
+   JP#ESTOP1
+EN
+
+#M1311
+   vSYSMSG=1311
+   vPAGE=4
+   JS#W_VCONT
+EN
+
+#M1312
+   vSYSMSG=1312
+   vPAGE=4
+   JS#W_VCONT
+EN
+
+
+#M1320
+   vSYSMSG=1320
+   vPAGE=4
+   MERR=MEC
+   JS#W_VCONT
+   VWDTH_ER=0
+   JP#ESTOP1
+EN
+
+#M3003
+   vSYSMSG=3003
+   vPAGE=4
+EN
+
+#M3004
+   vSYSMSG=3004
+   vPAGE=4
+EN
+
+REM===============================End of Module==================================

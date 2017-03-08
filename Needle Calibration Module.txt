@@ -1,0 +1,552 @@
+REM==========================Needle Calibration Module===========================
+REM             Author: Prog Dept   Date: 11/03/2014   Version: 1.16
+REM               ===============================================
+REM                              Revision History
+REM               ===============================================
+REM      Rev: Change:                                     Date:        By:
+REM      ------------------------------------------------------------------
+REM      01 - Modified From Base Module                 ##/##/##       XXX
+REM      ------------------------------------------------------------------
+REM
+REM
+REM      ------------------------------------------------------------------
+REM      To-Do:
+REM            Modify for Multiple Block Orientations (0,90,180,270)
+REM      ------------------------------------------------------------------
+REM
+REM==============================Initialize I/O==================================
+#NDL_IO
+   iCALX=iNA
+   iCALYZ=iNA
+EN
+
+REM============================Initialize Variables==============================
+#NDL_INI
+   DM PT_NCU[5],PT_SCU[5]
+   DM VLV_NCU[9],VLV_SCU[9]
+
+REM_______________________Set Points For Valve 1________________________
+   VLV_NCU[0]=25000;VLV_NCU[1]=25000;VLV_NCU[2]=0;VLV_NCU[3]=0
+   VLV_SCU[0]=25000;VLV_SCU[1]=25000;VLV_SCU[2]=0;VLV_SCU[3]=0
+
+REM_______________________Set Points For Valve 2________________________
+   VLV_NCU[4]=25000;VLV_NCU[5]=25000;VLV_NCU[6]=0;VLV_NCU[7]=0
+   VLV_SCU[4]=25000;VLV_SCU[5]=25000;VLV_SCU[6]=0;VLV_SCU[7]=0
+
+REM____________Crosshair/Sensor Positions Default to Valve 1____________
+   PT_NCU[0]=VLV_NCU[0] ; PT_SCU[0]=VLV_SCU[0]
+   PT_NCU[1]=VLV_NCU[1] ; PT_SCU[1]=VLV_SCU[1]
+   PT_NCU[2]=VLV_NCU[2] ; PT_SCU[2]=VLV_SCU[2]
+   PT_NCU[3]=VLV_NCU[3] ; PT_SCU[3]=VLV_SCU[3]
+
+   VLV1_XOF=0;VLV1_YOF=0;VLV1_ZOF=0
+   VLV2_XOF=0;VLV2_YOF=0;VLV2_ZOF=0
+
+   XOFF=0;YOFF=0;ZOFF=0
+   NDL_CNT=0
+   CAL_ERR=0
+   CAL_FLG=0
+   NDL_TMP=0
+EN
+
+REM===============================Check Variables================================
+#NDL_CHK
+   INIT=4
+   JP#NDL_RST,NDL_EN<0
+   JP#NDL_RST,NDL_FRQ<0
+   JP#NDL_RST,NDL_VLV<0
+   JP#NDL_RST,X_ADEV<0
+   JP#NDL_RST,Y_ADEV<0
+   JP#NDL_RST,Z_ADEV<0   
+EN
+
+REM===============================Reset Variables================================
+#NDL_RST
+   JS#M4000
+   NDL_EN=0
+   NDL_VLV=0   ;'0=Valve 1, 1=Valve 2, 2=Valve 1 & Valve 2
+   NDL_FRQ=10
+   X_ADEV=2.5
+   Y_ADEV=2.5
+   Z_ADEV=2.5   
+   JP#AUTO2
+
+REM===============================Error Checking=================================
+#NDL_SCN
+   JP#ESTOP,CAL_ERR<>0
+EN
+
+REM===============================Error Handling=================================
+#NDL_ERR
+REM -------------------
+REM  Needle Cal Errors
+REM -------------------
+   CAL_FLG=0
+   MEC=1100;JP#M1100,CAL_ERR<>0
+EN
+
+REM==============================Module Functions================================
+#NDL_FIX
+   IF(NDL_TMP=1)
+      PT_NCU[0]=VLV_NCU[0] ; PT_SCU[0]=VLV_SCU[0]
+      PT_NCU[1]=VLV_NCU[1] ; PT_SCU[1]=VLV_SCU[1]
+      PT_NCU[2]=VLV_NCU[2] ; PT_SCU[2]=VLV_SCU[2]
+      PT_NCU[3]=VLV_NCU[3] ; PT_SCU[3]=VLV_SCU[3]
+   ELSE
+      PT_NCU[0]=VLV_NCU[4] ; PT_SCU[0]=VLV_SCU[4]
+      PT_NCU[1]=VLV_NCU[5] ; PT_SCU[1]=VLV_SCU[5]
+      PT_NCU[2]=VLV_NCU[6] ; PT_SCU[2]=VLV_SCU[6]
+      PT_NCU[3]=VLV_NCU[7] ; PT_SCU[3]=VLV_SCU[7]
+   ENDIF
+EN
+
+REM ==================================
+REM  Laser Needle Calibration Routine 
+REM ==================================
+#NDL_CAL
+   JS#DR_CLOS 
+   JS#ALLUP
+   JS#SAFEZ
+ 
+REM -------------------------
+REM  Move To Reference Point
+REM -------------------------
+   AC 50000,50000,30000,30000
+   DC 50000,50000,30000,30000
+   SP 30000,30000,6000,6000
+
+   JS#M3050
+   
+REM -----------------------------------------------------
+REM  Set NDL_TMP From Either Setup-Tree or lstREF Option
+REM -----------------------------------------------------
+REM   IF(lstREF=1)
+REM      NDL_TMP=1
+REM   ENDIF
+REM   IF(lstREF=2)
+REM      NDL_TMP=2
+REM   ENDIF
+
+   NDL_TMP=1  ;'Place Holder
+   JS#NDL_FIX
+   
+   PA PT_NCU[0],PT_NCU[1],PT_NCU[2],PT_NCU[3]
+   BGXY;AMXY
+   
+   IF(AXES=4)
+      BGW;AMW
+   ENDIF
+
+   BGZ;AMZ
+   WT200
+
+REM ----------------------------------------------------------
+REM  Needle Verification: Lower Needle Manually to Crosshair.
+REM  Press CONTINUE to proceed/ESTOP to cancel calibration.
+REM ----------------------------------------------------------
+   JS#M1100
+
+   JS#DR_CLOS
+
+   JP#GT_NDL2  ;'Don't want to reset NDL_TMP
+
+REM ----------------------------
+REM  Needle Calibration Running
+REM ----------------------------
+#GET_NDL
+   JP#NOOP,((NDL_EN=0)*ACFLAG)
+   
+   IF((NDL_VLV=0)|(NDL_VLV=2))
+      NDL_TMP=1
+   ENDIF
+   
+   IF(NDL_VLV=1)
+      NDL_TMP=2
+   ENDIF
+   
+#GT_NDL2
+   JS#A2019,(ACFLAG)
+   CAL_FLG=1
+   ZCENTFLG=0
+   XCAL1=0;XCAL2=0;XCAL=0
+   YCAL1=0;YCAL2=0;YCAL=0
+   ZCAL=0;CAL_FLT=0
+   XLIM=1000;YLIM=1000;ZLIM=400
+   XDEV=(X_ADEV*200);YDEV=(Y_ADEV*200);ZDEV=(Z_ADEV*200)
+   JS#ALLUP
+   JS#N001
+
+REM --------
+REM  Z Axis
+REM --------
+   JS#N002
+   AXIS=2
+   JS#M3051,ACFLAG=0
+   AC 50000,50000,30000,30000
+   DC 50000,50000,30000,30000
+   SP 60000,60000,6000,6000
+   
+   JS#NDL_FIX
+   
+   PA PT_SCU[0],PT_SCU[1],PT_SCU[2]-250,PT_SCU[3]
+   BGXY;AMXY
+
+   IF(AXES=4)
+      BGW;AMW
+   ENDIF
+
+   BGZ;AMZ
+
+REM -------------------------------------------
+REM  Lower Needle Valve Z-Slide
+REM  (May need to change Subroutine reference)
+REM -------------------------------------------
+   JS#TLDW(1,1,TYPE[1])
+  
+   JGZ=250;BGZ
+
+   NO ------------
+   NO  Z (+) Loop
+   NO ------------
+#CAL_Z1
+   CAL_FLT=1
+   JP#CAL_ER,_TPZ>PT_SCU[2]+ZLIM
+   JP#CAL_Z1,@IN[iCALYZ]=0
+
+#CAL_Z2
+   STZ;AMZ
+   WT500
+   ZCAL=_TPZ
+
+   CAL_FLT=2
+   JP#CAL_ER,@ABS[ZCAL-PT_SCU[2]]>ZDEV
+   ZOFF=(ZCAL-PT_SCU[2])
+
+REM --------
+REM  Y Axis
+REM -------- 
+   JS#N003
+   AXIS=1
+   JS#M3052,ACFLAG=0
+   SP 50000,50000,3000
+   PAZ=(PT_SCU[2]+ZOFF+50)
+   BGZ;AMZ
+
+   JGY=-500;BGY
+
+#WT_Y1
+   CAL_FLT=3
+   JP#CAL_ER,_TPY<(PT_SCU[1]-685-YLIM)
+   JP#WT_Y1,(@IN[iCALYZ]=1)
+   WT500
+   STY;AMY
+  
+   JGY=250;BGY
+
+REM ------------------------------------
+REM  ------------
+REM   Y (+) Loop
+REM  ------------
+REM   From the center to the end of the
+REM   crosshair is 685 counts
+REM ------------------------------------
+#CAL_Y
+   CAL_FLT=3
+   JP#CAL_ER,_TPY>(PT_SCU[1]+685+YLIM)
+   JP#CAL_Y,(@IN[iCALYZ]=0)
+   STY;AMY
+   WT500
+   YCAL1=_TPY
+
+   JGY=500;BGY
+
+#WT_Y2
+   CAL_FLT=3
+   JP#CAL_ER,_TPY>(PT_SCU[1]+685+YLIM)
+   JP#WT_Y2,(@IN[iCALYZ]=1)
+   WT500
+   STY;AMY
+
+   JGY=-250;BGY
+
+REM ------------
+REM  Y (-) Loop
+REM ------------
+#CAL_Y2
+   CAL_FLT=3
+   JP#CAL_ER,_TPY<(PT_SCU[1]-685-YLIM)
+   JP#CAL_Y2,(@IN[iCALYZ]=0)
+   STY;AMY
+   WT500
+   YCAL2=_TPY
+   
+   CALY=((YCAL1+YCAL2)/2)
+   CAL_FLT=4
+   JP#CAL_ER,@ABS[CALY-PT_SCU[1]]>YDEV
+   YOFF=(CALY-PT_SCU[1])
+
+REM --------
+REM  X Axis
+REM --------
+   JS#N004
+   AXIS=0
+   JS#M3053,ACFLAG=0
+   SP 50000,50000,3000
+   PA PT_SCU[0]-885,PT_SCU[1]+YOFF,(PT_SCU[2]+ZOFF+50)
+   BGXY;AMXY
+   BGZ;AMZ
+   JGX=250;BGX
+
+REM ------------
+REM  X (+) Loop
+REM ------------
+#CAL_X
+   CAL_FLT=5
+   JP#CAL_ER,_TPX>PT_SCU[0]+XLIM
+   JP#CAL_X,(@IN[iCALX]=0)
+   STX;AMX
+   WT500
+
+   XCAL1=_TPX
+
+   SP 50000,50000,3000
+   PA PT_SCU[0]+885,PT_SCU[1]+YOFF,(PT_SCU[2]+ZOFF+50)
+   BGXY;AMXY
+   BGZ;AMZ
+
+   JGX=-250;BGX
+
+REM ------------
+REM  X (-) Loop
+REM ------------
+#CAL_X2
+   JP#CAL_ER,_TPX<PT_SCU[0]-XLIM
+   JP#CAL_X2,(@IN[iCALX]=0)
+   STX;AMX
+   WT500
+   XCAL2=_TPX
+   
+   CALX=((XCAL1+XCAL2)/2)
+   CAL_FLT=6
+   JP#CAL_ER,@ABS[CALX-PT_SCU[0]]>XDEV
+   XOFF=(CALX-PT_SCU[0])
+
+REM -----------------------
+REM  Complete. Set Offsets
+REM -----------------------
+   JS#N005
+
+   IF(NDL_TMP=1)
+      VLV1_XOF=XOFF
+      VLV1_YOF=YOFF
+      VLV1_ZOF=ZOFF
+   ELSE
+      VLV2_XOF=XOFF
+      VLV2_YOF=YOFF
+      VLV2_ZOF=ZOFF
+   ENDIF
+
+   SPZ=10000
+   PAZ=0
+   BGZ;AMZ
+
+   CAL_FLG=0
+   NDL_CNT=0
+   DA XCAL1,XCAL2,XCAL,YCAL1,YCAL2,YCAL,ZCAL
+   DA CAL_FLT,XLIM,YLIM,ZLIM,XDEV,YDEV,ZDEV
+   BV;DGERR_TM=TIME
+
+   JS#ALLUP
+   
+   IF((NDL_VLV=2)&(NDL_TMP=1))
+      NDL_TMP=2
+      JP#GT_NDL2
+   ENDIF
+   
+   JS#MV_SBY,ACFLAG=1
+   JP#NOOP,ACFLAG=1
+
+   AC 50000,50000,30000,30000
+   DC 50000,50000,30000,30000
+   SP 30000,30000,10000,6000
+   PA PT_NCU[0]+XOFF,PT_NCU[1]+YOFF,PT_NCU[2]+ZOFF,PT_NCU[3]
+   BGXY;AMXY
+   
+   IF(AXES=4)
+      BGW;AMW
+   ENDIF
+   
+   BGZ;AMZ
+
+   JS#M3054,ACFLAG=0
+   WT2000
+   vPAGE=2
+   DRFLAG=0
+   JS#BT_REL
+EN
+
+REM ---------------------------------------------------------------------------
+REM  Z Center Routine
+REM  ----------------
+REM  The Z Center Routine is utitlized to account for a hard offset in either
+REM  the positive or negative Y direction. The routine moves right 400 counts,
+REM  or 2 mm, and attempts to find the sensor plane. If the plane is not found,
+REM  the routine moves to the right 800 counts to be 400 counts past its
+REM  original position. If the plane is found after this centering routine, 
+REM  the Z-Axis offset is found at the new Y position. If the plane is not
+REM  found, the appropriate Y Axis Limit Failure is displayed.
+REM ---------------------------------------------------------------------------
+
+REM ----------
+REM  Move +Y
+REM ----------
+#ZCENT
+   STZ;AMZ
+   JGY=800;BGY
+   WT500
+   JP#ZRESET,@IN[iCALYZ]=1
+
+REM ----------
+REM  Move -Y
+REM ----------
+#ZCENT2
+   JGY=-400;BGY
+   WT1000
+   JP#ZRESET,@IN[iCALYZ]=1
+   ZCENTFLG=1
+   JP#CAL_Z1
+
+REM ----------------------------------------
+REM  XY Plane Found: Reset Z Offset Routine
+REM ----------------------------------------
+#ZRESET
+   STY;AMY
+   JGZ=-400;BGZ
+   WT2000
+   JGZ=250;BGZ
+   ZCENTFLG=1
+   JP#CAL_Z1
+
+REM ========================
+REM  Needle Cal Subroutines
+REM ========================
+REM ------------------
+REM Calibration Error
+REM ------------------
+#CAL_ER
+   JP#ZCENT,((AXIS=2)&(ZCENTFLG=0))
+   JS#FLTSET,ZCENTFLG=1
+   STXYZ;AMXYZ;WT200;JS#TUNE;JS#SAFEZ;CAL_ERR=CAL_FLT;WT999;EN
+
+REM -----------
+REM  Fault Set
+REM -----------
+#FLTSET
+   CAL_FLT=5
+EN
+
+#VLV1_AD
+   GX=(GX+VLV1_XOF)
+   GY=(GY+VLV1_YOF)
+   GZ=(GZ+VLV1_ZOF)
+EN
+
+#VLV1_RM
+   GX=(GX-VLV1_XOF)
+   GY=(GY-VLV1_YOF)
+   GZ=(GZ-VLV1_ZOF)
+EN
+
+#VLV2_AD
+   GX=(GX+VLV2_XOF)
+   GY=(GY+VLV2_YOF)
+   GZ=(GZ+VLV2_ZOF)
+EN
+
+#VLV2_RM
+   GX=(GX-VLV2_XOF)
+   GY=(GY-VLV2_YOF)
+   GZ=(GZ-VLV2_ZOF)
+EN
+
+REM==============================Module Messages=================================
+#M1100
+   vPAGE=4
+   vSYSMSG=1100+CAL_ERR
+   IF(CAL_ERR=0)
+      DRFLAG=0
+   ELSE
+      MERR=MEC
+   ENDIF
+   JS#W_VCONT
+   CAL_ERR=0
+   JP#ESTOP1,vSYSMSG>1100
+EN
+
+#M3050
+   vPAGE=4
+   vSYSMSG=3050
+EN
+
+#M3051
+   vPAGE=4
+   vSYSMSG=3051
+EN
+
+#M3052
+   vPAGE=4
+   vSYSMSG=3052
+EN
+
+#M3053
+   vPAGE=4
+   vSYSMSG=3053
+EN
+
+#M3054
+   vPAGE=4
+   vSYSMSG=3054
+EN
+
+#A2019
+   vAUTOMSG=2019
+   WT(30*ms)
+   vPAGE=3
+EN
+
+REM ---------------------------------
+REM  Needle Cal Unsolicited Messages
+REM ---------------------------------
+#N001
+   vACK=0
+   MG{EH}{^02},"<SYS> Needle Calibration Running..",{^03}
+   JS#WT_ACK
+EN
+
+#N002
+   vACK=0
+   MG{EH}{^02},"<SYS>     Finding Z...",{^03}
+   JS#WT_ACK
+EN
+
+
+#N003
+   vACK=0
+   MG{EH}{^02},"<SYS>     Finding Y...",{^03}
+   JS#WT_ACK
+EN
+
+
+#N004
+   vACK=0
+   MG{EH}{^02},"<SYS>     Finding X...",{^03}
+   JS#WT_ACK
+EN
+
+#N005
+   vACK=0
+   MG{EH}{^02},"<SYS> Calibration Successful.",{^03}
+   JS#WT_ACK
+EN
+
+REM===============================End of Module==================================
